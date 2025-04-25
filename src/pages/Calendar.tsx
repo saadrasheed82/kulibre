@@ -32,12 +32,12 @@ export default function CalendarPage() {
     }
   });
 
-  const selectedDateEvents = events?.tasks.filter(task => 
-    task.due_date && format(new Date(task.due_date), 'yyyy-MM-dd') === format(date || new Date(), 'yyyy-MM-dd')
-  ) || [];
-
   const selectedDateProjects = events?.projects.filter(project => 
     project.due_date && format(new Date(project.due_date), 'yyyy-MM-dd') === format(date || new Date(), 'yyyy-MM-dd')
+  ) || [];
+
+  const selectedDateTasks = events?.tasks.filter(task => 
+    task.due_date && format(new Date(task.due_date), 'yyyy-MM-dd') === format(date || new Date(), 'yyyy-MM-dd')
   ) || [];
 
   return (
