@@ -1,0 +1,106 @@
+
+import { Calendar, FolderKanban, Home, Menu, Settings, Users, X } from "lucide-react";
+import { useState } from "react";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Link } from "react-router-dom";
+import { cn } from "@/lib/utils";
+
+export function MobileNavigation() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <button className="md:hidden p-2">
+          <Menu className="h-6 w-6" />
+        </button>
+      </SheetTrigger>
+      <SheetContent side="left" className="p-0">
+        <div className="flex flex-col h-full">
+          <div className="flex items-center justify-between p-4 border-b">
+            <div className="flex items-center gap-2">
+              <div className="bg-creatively-purple rounded-lg w-8 h-8 flex items-center justify-center">
+                <span className="text-white font-bold">C</span>
+              </div>
+              <h1 className="text-xl font-bold">Creatively</h1>
+            </div>
+            <button onClick={() => setOpen(false)}>
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          
+          <nav className="flex-1 overflow-auto p-4 space-y-1">
+            <MobileNavItem 
+              icon={<Home className="w-5 h-5" />} 
+              href="/" 
+              label="Dashboard" 
+              active 
+              onClick={() => setOpen(false)} 
+            />
+            <MobileNavItem 
+              icon={<FolderKanban className="w-5 h-5" />} 
+              href="/projects" 
+              label="Projects" 
+              onClick={() => setOpen(false)} 
+            />
+            <MobileNavItem 
+              icon={<Calendar className="w-5 h-5" />} 
+              href="/calendar" 
+              label="Calendar" 
+              onClick={() => setOpen(false)} 
+            />
+            <MobileNavItem 
+              icon={<Users className="w-5 h-5" />} 
+              href="/team" 
+              label="Team"
+              onClick={() => setOpen(false)} 
+            />
+            <MobileNavItem 
+              icon={<Settings className="w-5 h-5" />} 
+              href="/settings" 
+              label="Settings" 
+              onClick={() => setOpen(false)} 
+            />
+          </nav>
+          
+          <div className="p-4 border-t">
+            <div className="bg-creatively-purple/10 rounded-lg p-4">
+              <h3 className="font-medium text-sm">Free Plan</h3>
+              <p className="text-xs text-muted-foreground mt-1">2/5 projects used</p>
+              <div className="mt-2 h-1.5 bg-creatively-purple/20 rounded-full">
+                <div className="h-full bg-creatively-purple rounded-full w-2/5"></div>
+              </div>
+              <button className="mt-3 text-xs text-creatively-purple font-medium">Upgrade Plan</button>
+            </div>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+interface MobileNavItemProps {
+  icon: React.ReactNode;
+  href: string;
+  label: string;
+  active?: boolean;
+  onClick: () => void;
+}
+
+function MobileNavItem({ icon, href, label, active, onClick }: MobileNavItemProps) {
+  return (
+    <Link
+      to={href}
+      className={cn(
+        "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+        active
+          ? "bg-creatively-purple text-white"
+          : "text-muted-foreground hover:bg-creatively-purple/10 hover:text-foreground"
+      )}
+      onClick={onClick}
+    >
+      {icon}
+      {label}
+    </Link>
+  );
+}
