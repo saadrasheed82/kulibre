@@ -1,12 +1,64 @@
 
 import { Bell, Plus, Search } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 export function Header() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [userInitials, setUserInitials] = useState("JS");
   const navigate = useNavigate();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    // Fetch user profile when component mounts
+    const fetchUserProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        // Get profile data
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+        
+        if (profile && profile.full_name) {
+          // Generate initials from full name
+          const names = profile.full_name.split(' ');
+          const initials = names.length > 1
+            ? `${names[0][0]}${names[names.length - 1][0]}`
+            : names[0].substring(0, 2);
+          
+          setUserInitials(initials.toUpperCase());
+        } else {
+          // Use email as fallback
+          const email = user.email || '';
+          setUserInitials(email.substring(0, 2).toUpperCase());
+        }
+      }
+    };
+
+    fetchUserProfile();
+  }, []);
+
+  const handleNewProject = () => {
+    // Check if user is authenticated before navigating to new project page
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        navigate('/projects/new');
+      } else {
+        toast({
+          title: "Authentication required",
+          description: "Please log in to create a new project",
+          variant: "destructive",
+        });
+        navigate('/login');
+      }
+    });
+  };
 
   return (
     <header className="border-b py-3 px-6 flex items-center justify-between bg-white">
@@ -28,7 +80,7 @@ export function Header() {
           size="sm" 
           variant="default" 
           className="gap-1"
-          onClick={() => navigate('/projects/new')}
+          onClick={handleNewProject}
         >
           <Plus className="h-4 w-4" /> 
           <span className="hidden md:inline">New Project</span>
@@ -40,7 +92,7 @@ export function Header() {
           </span>
         </div>
         <div className="h-9 w-9 rounded-full bg-creatively-purple flex items-center justify-center text-white font-medium">
-          JS
+          {userInitials}
         </div>
       </div>
     </header>

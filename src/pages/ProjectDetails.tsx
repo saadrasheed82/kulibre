@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
@@ -18,6 +18,7 @@ import { CommentsTab } from "@/components/project/CommentsTab";
 import { TimelineTab } from "@/components/project/TimelineTab";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
 interface ProjectDetailsProps {
@@ -28,10 +29,14 @@ export default function ProjectDetails({ id: propId }: ProjectDetailsProps) {
   const { id: routeId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const { toast } = useToast();
   
   // Check if we're creating a new project
   const isNewProject = location.pathname === '/projects/new';
   const projectId = propId || routeId;
+
+  // State for current user
+  const [userId, setUserId] = useState<string | null>(null);
 
   // State for project details
   const [projectName, setProjectName] = useState(isNewProject ? "" : "Brand Refresh Project");
@@ -46,6 +51,26 @@ export default function ProjectDetails({ id: propId }: ProjectDetailsProps) {
   const [progress, setProgress] = useState(isNewProject ? 0 : 65);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Fetch the current user when component mounts
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+      } else {
+        // If no user is found, redirect to login
+        toast({
+          title: "Authentication required",
+          description: "Please log in to create or view projects",
+          variant: "destructive",
+        });
+        navigate('/login');
+      }
+    };
+
+    fetchUser();
+  }, [navigate, toast]);
 
   const statusColors = {
     'In Progress': 'bg-blue-100 text-blue-700',
@@ -64,7 +89,21 @@ export default function ProjectDetails({ id: propId }: ProjectDetailsProps) {
   // Handle project creation/update
   const handleSaveProject = async () => {
     if (!projectName) {
-      alert("Project name is required");
+      toast({
+        title: "Project name required",
+        description: "Please provide a name for your project",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!userId) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to create a project",
+        variant: "destructive",
+      });
+      navigate('/login');
       return;
     }
 
@@ -121,11 +160,12 @@ export default function ProjectDetails({ id: propId }: ProjectDetailsProps) {
           dbProjectType = "other";
         }
         
-        // Create a minimal project object with only the required fields
+        // Create a project object with all required fields
         const projectData = { 
           name: projectName,
           type: dbProjectType,
           status: dbStatus,
+          created_by: userId, // Critical: Set the creator ID to the current user
         };
         
         // Add optional fields only if they have values
@@ -136,40 +176,36 @@ export default function ProjectDetails({ id: propId }: ProjectDetailsProps) {
         console.log("Saving project with:", projectData);
         
         try {
-          // First, try to create the project without automatically adding the current user
-          // as a project member (which might be causing the recursion issue)
           const { data, error } = await supabase
             .from('projects')
             .insert([projectData])
             .select();
             
           if (error) {
-            // If there's an error related to project_members policy, try a different approach
-            if (error.message && error.message.includes("project_members")) {
-              console.log("Detected project_members policy issue, trying alternative approach");
-              
-              // Try inserting without returning the data
-              const insertResult = await supabase
-                .from('projects')
-                .insert([projectData]);
-                
-              if (insertResult.error) {
-                console.error("Alternative approach also failed:", insertResult.error);
-                throw insertResult.error;
-              }
-              
-              // If successful, navigate to projects page
-              navigate('/projects');
-              return;
-            } else {
-              // For other errors, throw normally
-              console.error("Supabase error details:", error);
-              throw error;
-            }
+            console.error("Supabase error details:", error);
+            throw error;
           }
           
           // Navigate to the newly created project
           if (data && data[0]) {
+            // Create project member entry to associate user with project
+            const { error: memberError } = await supabase
+              .from('project_members')
+              .insert([{ 
+                project_id: data[0].id,
+                user_id: userId
+              }]);
+
+            if (memberError) {
+              console.error("Error adding project member:", memberError);
+              // Continue anyway as the project was created
+            }
+            
+            toast({
+              title: "Project created",
+              description: "Your new project has been created successfully",
+            });
+            
             navigate(`/projects/${data[0].id}`);
           } else {
             navigate('/projects');
@@ -226,7 +262,7 @@ export default function ProjectDetails({ id: propId }: ProjectDetailsProps) {
           dbProjectType = "other";
         }
         
-        // Create a minimal project object with only the required fields
+        // Create a project object with all required fields
         const projectData = { 
           name: projectName,
           type: dbProjectType,
@@ -253,36 +289,19 @@ export default function ProjectDetails({ id: propId }: ProjectDetailsProps) {
     } catch (error: any) {
       console.error('Error saving project:', error);
       
-      // Check for the specific recursion error
-      if (error?.message && error.message.includes("infinite recursion detected in policy for relation \"project_members\"")) {
-        // This is a known issue with the Supabase policy
-        setError("There was an issue with project permissions. The project may have been created but couldn't be displayed. Please check the projects list.");
-        
-        // Navigate back to projects list after a short delay
-        setTimeout(() => {
-          navigate('/projects');
-        }, 3000);
-        
-        return;
-      }
-      
-      // Provide more detailed error message for other errors
+      // Provide more detailed error message
       let errorMessage = 'Failed to save project. Please try again.';
       
       if (error?.message) {
         errorMessage += ` Error: ${error.message}`;
       }
       
-      if (error?.details) {
-        errorMessage += ` Details: ${error.details}`;
-      }
-      
-      if (error?.hint) {
-        errorMessage += ` Hint: ${error.hint}`;
-      }
-      
       setError(errorMessage);
-      alert(errorMessage);
+      toast({
+        title: "Error saving project",
+        description: errorMessage,
+        variant: "destructive",
+      });
     } finally {
       setIsSaving(false);
     }
