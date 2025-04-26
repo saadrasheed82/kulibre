@@ -41,7 +41,6 @@ export default function CalendarPage() {
   ) || [];
 
   return (
-    <Layout>
       <div className="space-y-8">
         <div>
           <h1 className="text-3xl font-bold">Calendar</h1>
@@ -112,6 +111,5 @@ export default function CalendarPage() {
           </Card>
         </div>
       </div>
-    </Layout>
   );
 }

@@ -2,9 +2,11 @@
 import { Bell, Plus, Search } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 export function Header() {
   const [searchQuery, setSearchQuery] = useState("");
+  const navigate = useNavigate();
 
   return (
     <header className="border-b py-3 px-6 flex items-center justify-between bg-white">
@@ -22,7 +24,12 @@ export function Header() {
       </div>
 
       <div className="flex items-center gap-4">
-        <Button size="sm" variant="default" className="gap-1">
+        <Button 
+          size="sm" 
+          variant="default" 
+          className="gap-1"
+          onClick={() => navigate('/projects/new')}
+        >
           <Plus className="h-4 w-4" /> 
           <span className="hidden md:inline">New Project</span>
         </Button>

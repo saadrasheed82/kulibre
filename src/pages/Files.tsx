@@ -3,7 +3,6 @@ import { Layout } from "@/components/layout/Layout";
 
 export default function Files() {
   return (
-    <Layout>
       <div className="space-y-8">
         <div>
           <h1 className="text-3xl font-bold">Files</h1>
@@ -16,6 +15,5 @@ export default function Files() {
           </p>
         </div>
       </div>
-    </Layout>
   );
 }

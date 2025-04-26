@@ -192,7 +192,6 @@ export default function Projects() {
   };
 
   return (
-    <Layout>
       <div className="space-y-8">
         <div className="flex justify-between items-center">
           <div>
@@ -559,6 +558,5 @@ export default function Projects() {
           </div>
         )}
       </div>
-    </Layout>
   );
 }

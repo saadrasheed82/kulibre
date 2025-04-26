@@ -21,7 +21,6 @@ export default function Settings() {
   });
 
   return (
-    <Layout>
       <div className="space-y-8">
         <div>
           <h1 className="text-3xl font-bold">Settings</h1>
@@ -52,6 +51,5 @@ export default function Settings() {
           </Card>
         </div>
       </div>
-    </Layout>
   );
 }
