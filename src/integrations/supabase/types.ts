@@ -107,6 +107,36 @@ export type Database = {
         }
         Relationships: []
       }
+      subscriptions: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          id: string
+          started_at: string
+          tier: Database["public"]["Enums"]["subscription_tier"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          started_at?: string
+          tier?: Database["public"]["Enums"]["subscription_tier"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          started_at?: string
+          tier?: Database["public"]["Enums"]["subscription_tier"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           assigned_to: string | null
@@ -215,6 +245,7 @@ export type Database = {
         | "video"
         | "photography"
         | "other"
+      subscription_tier: "free" | "basic" | "premium"
       task_priority: "low" | "medium" | "high"
       user_role: "admin" | "team_member" | "client"
     }
@@ -349,6 +380,7 @@ export const Constants = {
         "photography",
         "other",
       ],
+      subscription_tier: ["free", "basic", "premium"],
       task_priority: ["low", "medium", "high"],
       user_role: ["admin", "team_member", "client"],
     },
