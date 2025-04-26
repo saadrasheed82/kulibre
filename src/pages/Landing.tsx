@@ -2,126 +2,499 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { 
   Check, 
   X, 
-  DollarSign 
+  DollarSign,
+  Zap,
+  Calendar,
+  Users,
+  BarChart2,
+  ArrowRight,
+  CheckCircle
 } from 'lucide-react';
-
-const PricingCard = ({ 
-  title, 
-  price, 
-  features, 
-  unavailable = [] 
-}: { 
-  title: string, 
-  price: string, 
-  features: string[], 
-  unavailable?: string[] 
-}) => (
-  <Card className="w-full max-w-sm">
-    <CardHeader>
-      <CardTitle className="flex justify-between items-center">
-        {title}
-        <DollarSign className="h-5 w-5" />
-      </CardTitle>
-    </CardHeader>
-    <CardContent className="space-y-4">
-      <div className="text-3xl font-bold">{price}</div>
-      <ul className="space-y-2">
-        {features.map((feature, index) => (
-          <li key={index} className="flex items-center gap-2">
-            <Check className="h-4 w-4 text-green-500" />
-            {feature}
-          </li>
-        ))}
-        {unavailable.map((feature, index) => (
-          <li key={index} className="flex items-center gap-2 text-muted-foreground">
-            <X className="h-4 w-4 text-red-500" />
-            {feature}
-          </li>
-        ))}
-      </ul>
-      <Link to="/signup">
-        <Button className="w-full">Choose {title}</Button>
-      </Link>
-    </CardContent>
-  </Card>
-);
 
 export default function Landing() {
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="p-6 flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <div className="bg-creatively-purple rounded-lg w-8 h-8 flex items-center justify-center">
-            <span className="text-white font-bold">C</span>
+      {/* Sticky Navbar */}
+      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100 p-4 md:px-6">
+        <div className="container mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <div className="bg-creatively-purple rounded-lg w-8 h-8 flex items-center justify-center">
+              <span className="text-white font-bold">C</span>
+            </div>
+            <h1 className="text-xl font-bold">Creatively</h1>
           </div>
-          <h1 className="text-xl font-bold">Creatively</h1>
+          <nav className="hidden md:flex items-center space-x-6">
+            <a href="#features" className="text-sm font-medium hover:text-creatively-purple transition-colors">Features</a>
+            <a href="#how-it-works" className="text-sm font-medium hover:text-creatively-purple transition-colors">How It Works</a>
+            <a href="#pricing" className="text-sm font-medium hover:text-creatively-purple transition-colors">Pricing</a>
+            <a href="#testimonials" className="text-sm font-medium hover:text-creatively-purple transition-colors">Testimonials</a>
+            <a href="#faq" className="text-sm font-medium hover:text-creatively-purple transition-colors">FAQ</a>
+          </nav>
+          <div className="flex items-center space-x-4">
+            <Link to="/login">
+              <Button variant="outline">Log In</Button>
+            </Link>
+            <Link to="/signup">
+              <Button>Sign Up</Button>
+            </Link>
+          </div>
         </div>
-        <nav className="space-x-4">
-          <Link to="/login">
-            <Button variant="outline">Login</Button>
-          </Link>
-          <Link to="/signup">
-            <Button>Sign Up</Button>
-          </Link>
-        </nav>
       </header>
       
-      <main className="flex-1 container mx-auto px-4 py-16 text-center">
-        <h1 className="text-4xl font-bold mb-4">Manage Your Creative Projects Seamlessly</h1>
-        <p className="text-xl text-muted-foreground mb-12">
-          Creatively helps teams collaborate, track progress, and bring ideas to life.
-        </p>
+      <main className="flex-1">
+        {/* Hero Section */}
+        <section className="py-20 md:py-32 bg-gradient-to-b from-creatively-purple/5 to-white">
+          <div className="container mx-auto px-4 text-center">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 tracking-tight">
+              Manage Creative Projects <span className="text-creatively-purple">Seamlessly</span>
+            </h1>
+            <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
+              Creatively helps creative agencies streamline workflows, collaborate effectively, and deliver exceptional results for their clients.
+            </p>
+            <div className="flex flex-col sm:flex-row justify-center gap-4">
+              <Link to="/signup">
+                <Button size="lg" className="px-8">
+                  Get Started <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+              <Button variant="outline" size="lg" className="px-8" asChild>
+                <a href="#how-it-works">See How It Works</a>
+              </Button>
+            </div>
+            <div className="mt-16 relative">
+              <div className="absolute inset-0 bg-gradient-to-t from-white to-transparent z-10 h-16 bottom-0 top-auto"></div>
+              <img 
+                src="https://loremflickr.com/1200/600/dashboard,design/all" 
+                alt="Creatively Dashboard" 
+                className="rounded-lg shadow-2xl border border-gray-200 mx-auto"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Features Section */}
+        <section id="features" className="py-20">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl font-bold mb-4">Powerful Features for Creative Teams</h2>
+              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+                Everything you need to manage projects, collaborate with your team, and delight your clients.
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              <FeatureCard 
+                icon={<Calendar className="h-10 w-10 text-creatively-purple" />}
+                title="Visual Project Planning"
+                description="Intuitive Kanban boards and Gantt charts that help you visualize project timelines and dependencies."
+              />
+              <FeatureCard 
+                icon={<Users className="h-10 w-10 text-creatively-orange" />}
+                title="Team Collaboration"
+                description="Real-time communication, file sharing, and task assignment to keep everyone on the same page."
+              />
+              <FeatureCard 
+                icon={<Zap className="h-10 w-10 text-creatively-yellow" />}
+                title="Automated Workflows"
+                description="Create custom workflows that automate repetitive tasks and keep projects moving forward."
+              />
+              <FeatureCard 
+                icon={<BarChart2 className="h-10 w-10 text-creatively-blue" />}
+                title="Advanced Analytics"
+                description="Gain insights into team performance, project profitability, and resource allocation."
+              />
+              <FeatureCard 
+                icon={<CheckCircle className="h-10 w-10 text-creatively-green" />}
+                title="Client Approvals"
+                description="Streamline the review and approval process with clients for faster feedback cycles."
+              />
+              <FeatureCard 
+                icon={<DollarSign className="h-10 w-10 text-creatively-pink" />}
+                title="Budget Tracking"
+                description="Monitor project budgets and expenses to keep your projects profitable."
+              />
+            </div>
+          </div>
+        </section>
         
-        <div className="flex justify-center gap-6 mb-16">
-          <PricingCard 
-            title="Free" 
-            price="$0" 
-            features={[
-              "Up to 5 Projects",
-              "Basic Task Management",
-              "Collaborative Workspace"
-            ]}
-            unavailable={[
-              "Advanced Analytics", 
-              "Priority Support",
-              "Unlimited Projects"
-            ]} 
-          />
-          <PricingCard 
-            title="Basic" 
-            price="$9.99/mo" 
-            features={[
-              "Up to 20 Projects",
-              "Advanced Task Management",
-              "Team Collaboration",
-              "Basic Analytics"
-            ]}
-            unavailable={[
-              "Enterprise Features",
-              "Priority Support"
-            ]} 
-          />
-          <PricingCard 
-            title="Premium" 
-            price="$24.99/mo" 
-            features={[
-              "Unlimited Projects",
-              "Advanced Analytics",
-              "Priority Support",
-              "Custom Integrations",
-              "Advanced Team Management"
-            ]} 
-          />
-        </div>
+        {/* How It Works */}
+        <section id="how-it-works" className="py-20 bg-creatively-gray">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl font-bold mb-4">How Creatively Works</h2>
+              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+                Getting started is simple. Here's how Creatively transforms your creative workflow.
+              </p>
+            </div>
+            
+            <div className="max-w-4xl mx-auto">
+              <div className="space-y-12">
+                <StepItem 
+                  number="1"
+                  title="Set up your workspace"
+                  description="Create your team workspace and invite team members to collaborate on projects."
+                />
+                <StepItem 
+                  number="2"
+                  title="Create your first project"
+                  description="Use our templates or start from scratch to set up your project structure."
+                />
+                <StepItem 
+                  number="3"
+                  title="Assign tasks and track progress"
+                  description="Break down projects into manageable tasks and track progress in real-time."
+                />
+                <StepItem 
+                  number="4"
+                  title="Collaborate and get feedback"
+                  description="Share work with clients, collect feedback, and get approvals all in one place."
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+        
+        {/* Testimonials */}
+        <section id="testimonials" className="py-20">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl font-bold mb-4">What Our Customers Say</h2>
+              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+                Join thousands of creative teams who've transformed their workflow with Creatively.
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              <TestimonialCard 
+                quote="Creatively has revolutionized how we manage our design projects. The client approval workflow is a game-changer."
+                author="Sarah Johnson"
+                role="Creative Director, DesignHub"
+              />
+              <TestimonialCard 
+                quote="We've reduced our project turnaround time by 40% since implementing Creatively. The team collaboration features are unmatched."
+                author="Michael Chen"
+                role="Agency Owner, Pixel Perfect"
+              />
+              <TestimonialCard 
+                quote="As a freelancer, Creatively helps me stay organized and professional with my clients. Worth every penny!"
+                author="Alex Rodriguez"
+                role="Independent Designer"
+              />
+            </div>
+          </div>
+        </section>
+        
+        {/* Pricing Section */}
+        <section id="pricing" className="py-20 bg-creatively-gray">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl font-bold mb-4">Simple, Transparent Pricing</h2>
+              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+                Choose the plan that best fits your team's needs. No hidden fees.
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+              <PricingCard 
+                title="Free" 
+                price="$0" 
+                description="Perfect for individuals and small projects"
+                features={[
+                  "Up to 5 Projects",
+                  "Basic Task Management",
+                  "Collaborative Workspace"
+                ]}
+                unavailable={[
+                  "Advanced Analytics", 
+                  "Priority Support",
+                  "Unlimited Projects"
+                ]} 
+                ctaText="Sign Up Free"
+                popular={false}
+              />
+              <PricingCard 
+                title="Basic" 
+                price="$9.99/mo" 
+                description="Great for growing creative teams"
+                features={[
+                  "Up to 20 Projects",
+                  "Advanced Task Management",
+                  "Team Collaboration",
+                  "Basic Analytics",
+                  "Client Portal"
+                ]}
+                unavailable={[
+                  "Enterprise Features",
+                  "Priority Support"
+                ]} 
+                ctaText="Start with Basic"
+                popular={true}
+              />
+              <PricingCard 
+                title="Premium" 
+                price="$24.99/mo" 
+                description="For professional agencies and studios"
+                features={[
+                  "Unlimited Projects",
+                  "Advanced Analytics",
+                  "Priority Support",
+                  "Custom Integrations",
+                  "Advanced Team Management",
+                  "Resource Allocation",
+                  "White-labeling"
+                ]} 
+                unavailable={[]}
+                ctaText="Go Premium"
+                popular={false}
+              />
+            </div>
+          </div>
+        </section>
+        
+        {/* FAQ Section */}
+        <section id="faq" className="py-20">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl font-bold mb-4">Frequently Asked Questions</h2>
+              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+                Got questions? We've got answers.
+              </p>
+            </div>
+            
+            <div className="max-w-3xl mx-auto">
+              <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="item-1">
+                  <AccordionTrigger>How does the free plan work?</AccordionTrigger>
+                  <AccordionContent>
+                    Our free plan gives you access to basic project management features for up to 5 projects. 
+                    You can create tasks, collaborate with team members, and manage deadlines. 
+                    There's no time limit on the free plan, use it as long as you like.
+                  </AccordionContent>
+                </AccordionItem>
+                
+                <AccordionItem value="item-2">
+                  <AccordionTrigger>Can I upgrade or downgrade my plan later?</AccordionTrigger>
+                  <AccordionContent>
+                    Yes! You can upgrade or downgrade your plan at any time. 
+                    When you upgrade, you'll be prorated for the remainder of your billing cycle. 
+                    When you downgrade, the changes will take effect at the end of your current billing cycle.
+                  </AccordionContent>
+                </AccordionItem>
+                
+                <AccordionItem value="item-3">
+                  <AccordionTrigger>Is there a limit to how many team members I can invite?</AccordionTrigger>
+                  <AccordionContent>
+                    The Free plan allows up to 3 team members, the Basic plan supports up to 10 team members, 
+                    and the Premium plan offers unlimited team members. Each team member gets their own login 
+                    and customized permissions based on their role.
+                  </AccordionContent>
+                </AccordionItem>
+                
+                <AccordionItem value="item-4">
+                  <AccordionTrigger>What kind of support do you offer?</AccordionTrigger>
+                  <AccordionContent>
+                    All plans include community support through our knowledge base and forums. 
+                    Basic plans include email support with a 48-hour response time. 
+                    Premium plans include priority email support with a response time of 24 hours 
+                    and access to live chat during business hours.
+                  </AccordionContent>
+                </AccordionItem>
+                
+                <AccordionItem value="item-5">
+                  <AccordionTrigger>Can I cancel my subscription anytime?</AccordionTrigger>
+                  <AccordionContent>
+                    Yes, you can cancel your subscription at any time. When you cancel, 
+                    you'll continue to have access to your paid features until the end of your billing cycle. 
+                    After that, your account will revert to the free plan.
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </div>
+          </div>
+        </section>
+        
+        {/* Final CTA */}
+        <section className="py-20 bg-creatively-purple/10">
+          <div className="container mx-auto px-4 text-center">
+            <h2 className="text-3xl font-bold mb-4">Ready to Transform Your Creative Workflow?</h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
+              Join thousands of creative teams who've streamlined their processes with Creatively.
+            </p>
+            <Link to="/signup">
+              <Button size="lg" className="px-8">
+                Get Started Free
+              </Button>
+            </Link>
+            <p className="mt-4 text-sm text-muted-foreground">No credit card required</p>
+          </div>
+        </section>
       </main>
       
-      <footer className="p-6 text-center">
-        <p className="text-muted-foreground">© 2024 Creatively. All rights reserved.</p>
+      <footer className="bg-gray-50 py-12 border-t">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            <div>
+              <h3 className="font-semibold mb-4">Product</h3>
+              <ul className="space-y-2">
+                <li><a href="#features" className="text-sm text-muted-foreground hover:text-foreground">Features</a></li>
+                <li><a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground">Pricing</a></li>
+                <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground">Roadmap</a></li>
+                <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground">Updates</a></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="font-semibold mb-4">Company</h3>
+              <ul className="space-y-2">
+                <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground">About</a></li>
+                <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground">Careers</a></li>
+                <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground">Blog</a></li>
+                <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground">Contact</a></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="font-semibold mb-4">Resources</h3>
+              <ul className="space-y-2">
+                <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground">Documentation</a></li>
+                <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground">Tutorials</a></li>
+                <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground">Support</a></li>
+                <li><a href="#faq" className="text-sm text-muted-foreground hover:text-foreground">FAQ</a></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="font-semibold mb-4">Legal</h3>
+              <ul className="space-y-2">
+                <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground">Privacy</a></li>
+                <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground">Terms</a></li>
+                <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground">Security</a></li>
+              </ul>
+            </div>
+          </div>
+          <div className="mt-12 pt-8 border-t border-gray-200 flex flex-col md:flex-row justify-between items-center">
+            <div className="flex items-center gap-2 mb-4 md:mb-0">
+              <div className="bg-creatively-purple rounded-lg w-8 h-8 flex items-center justify-center">
+                <span className="text-white font-bold">C</span>
+              </div>
+              <span className="font-bold">Creatively</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              © {new Date().getFullYear()} Creatively. All rights reserved.
+            </p>
+          </div>
+        </div>
       </footer>
     </div>
   );
 }
+
+// Component for feature cards
+const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) => {
+  return (
+    <Card className="card-hover h-full">
+      <CardContent className="pt-6">
+        <div className="mb-5">
+          {icon}
+        </div>
+        <h3 className="text-xl font-semibold mb-2">{title}</h3>
+        <p className="text-muted-foreground">{description}</p>
+      </CardContent>
+    </Card>
+  );
+};
+
+// Component for how it works steps
+const StepItem = ({ number, title, description }: { number: string, title: string, description: string }) => {
+  return (
+    <div className="flex gap-6">
+      <div className="flex-shrink-0">
+        <div className="w-12 h-12 bg-creatively-purple text-white rounded-full flex items-center justify-center font-bold text-xl">
+          {number}
+        </div>
+      </div>
+      <div>
+        <h3 className="text-xl font-semibold mb-2">{title}</h3>
+        <p className="text-muted-foreground">{description}</p>
+      </div>
+    </div>
+  );
+};
+
+// Component for testimonial cards
+const TestimonialCard = ({ quote, author, role }: { quote: string, author: string, role: string }) => {
+  return (
+    <Card className="h-full">
+      <CardContent className="pt-6">
+        <div className="mb-4 text-4xl text-creatively-purple/30">"</div>
+        <p className="mb-6 italic">{quote}</p>
+        <div>
+          <p className="font-semibold">{author}</p>
+          <p className="text-sm text-muted-foreground">{role}</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// Component for pricing cards
+const PricingCard = ({ 
+  title, 
+  price, 
+  description,
+  features, 
+  unavailable = [],
+  ctaText,
+  popular
+}: { 
+  title: string, 
+  price: string, 
+  description: string,
+  features: string[], 
+  unavailable?: string[],
+  ctaText: string,
+  popular: boolean
+}) => (
+  <Card className={`h-full ${
+    popular ? 'border-2 border-creatively-purple relative' : ''
+  }`}>
+    {popular && (
+      <div className="absolute top-0 right-0 bg-creatively-purple text-white text-xs font-bold px-3 py-1 rounded-bl-lg rounded-tr-lg">
+        Popular
+      </div>
+    )}
+    <CardHeader>
+      <CardTitle className="flex justify-between items-center">
+        {title}
+        <DollarSign className="h-5 w-5 text-muted-foreground" />
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="space-y-4">
+      <div className="text-3xl font-bold">{price}</div>
+      <p className="text-sm text-muted-foreground">{description}</p>
+      <ul className="space-y-2">
+        {features.map((feature, index) => (
+          <li key={index} className="flex items-center gap-2 text-sm">
+            <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
+            <span>{feature}</span>
+          </li>
+        ))}
+        {unavailable.map((feature, index) => (
+          <li key={index} className="flex items-center gap-2 text-sm text-muted-foreground">
+            <X className="h-4 w-4 text-red-500 flex-shrink-0" />
+            <span>{feature}</span>
+          </li>
+        ))}
+      </ul>
+    </CardContent>
+    <CardFooter>
+      <Link to="/signup" className="w-full">
+        <Button className={`w-full ${popular ? 'bg-creatively-purple hover:bg-creatively-purple/90' : ''}`}>
+          {ctaText}
+        </Button>
+      </Link>
+    </CardFooter>
+  </Card>
+);
