@@ -63,16 +63,6 @@ export function MobileNavigation() {
             />
           </nav>
           
-          <div className="p-4 border-t">
-            <div className="bg-creatively-purple/10 rounded-lg p-4">
-              <h3 className="font-medium text-sm">Free Plan</h3>
-              <p className="text-xs text-muted-foreground mt-1">2/5 projects used</p>
-              <div className="mt-2 h-1.5 bg-creatively-purple/20 rounded-full">
-                <div className="h-full bg-creatively-purple rounded-full w-2/5"></div>
-              </div>
-              <button className="mt-3 text-xs text-creatively-purple font-medium">Upgrade Plan</button>
-            </div>
-          </div>
         </div>
       </SheetContent>
     </Sheet>
