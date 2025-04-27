@@ -1,28 +1,31 @@
+
 import { useState } from "react";
 import { useFiles } from "@/hooks/useFiles";
+import { FilePreviewDialog } from "@/components/files/FilePreviewDialog";
 import { UploadDialog } from "@/components/files/UploadDialog";
 import { CreateFolderDialog } from "@/components/files/CreateFolderDialog";
 import { RenameDialog } from "@/components/files/RenameDialog";
 import { DeleteDialog } from "@/components/files/DeleteDialog";
-import { FilePreviewDialog } from "@/components/files/FilePreviewDialog";
-import { FileCard } from "@/components/files/FileCard";
-import { FolderCard } from "@/components/files/FolderCard";
+import { MoveDialog } from "@/components/files/MoveDialog";
 import { EmptyState } from "@/components/files/EmptyState";
 import { BreadcrumbNav } from "@/components/files/BreadcrumbNav";
+import { ActionButtons } from "@/components/files/ActionButtons";
+import { SearchBar } from "@/components/files/SearchBar";
+import { ViewModeToggle } from "@/components/files/ViewModeToggle";
+import { FileList } from "@/components/files/FileList";
 import { FileItem } from "@/types/files";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Search, Upload, FolderPlus } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 
 export default function Files() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [view, setView] = useState<"grid" | "list">("grid");
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [createFolderDialogOpen, setCreateFolderDialogOpen] = useState(false);
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [breadcrumbs, setBreadcrumbs] = useState<{id: string | null, name: string}[]>([
     { id: null, name: "Home" }
   ]);
+  
+  // Preview dialog state
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   
@@ -32,7 +35,11 @@ export default function Files() {
   
   // Delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<{id: string, name: string, type: "file" | "folder"} | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<{id: string, name: string, type: "file" | "folder", path?: string} | null>(null);
+  
+  // Move dialog state
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+  const [itemToMove, setItemToMove] = useState<{id: string, name: string, type: "file" | "folder"} | null>(null);
 
   const {
     files,
@@ -44,14 +51,24 @@ export default function Files() {
     deleteFolder,
     renameFile,
     renameFolder,
+    moveFile,
+    moveFolder,
     getFileUrl
   } = useFiles(currentFolderId);
 
-  const { toast } = useToast();
+  // Filter files and folders based on search query
+  const filteredFolders = folders?.filter(folder => 
+    folder.name.toLowerCase().includes(searchQuery.toLowerCase())
+  ) || [];
+  
+  const filteredFiles = files?.filter(file =>
+    file.name.toLowerCase().includes(searchQuery.toLowerCase())
+  ) || [];
 
+  // Handle file and folder operations
   const handleUploadComplete = async (file: File) => {
     try {
-      await uploadFile({ file, parentFolderId: currentFolderId });
+      await uploadFile(file);
       setUploadDialogOpen(false);
     } catch (error) {
       console.error('Upload error:', error);
@@ -60,33 +77,18 @@ export default function Files() {
 
   const handleCreateFolder = async (name: string) => {
     try {
-      await createFolder({ name, parentFolderId: currentFolderId });
+      await createFolder(name);
       setCreateFolderDialogOpen(false);
     } catch (error) {
       console.error('Create folder error:', error);
     }
   };
 
-  const handleFileDownload = async (fileId: string, filePath: string) => {
-    try {
-      const url = await getFileUrl(filePath);
-      const link = document.createElement('a');
-      link.href = url;
-      link.target = '_blank';
-      link.click();
-    } catch (error) {
-      console.error('Download error:', error);
-      toast({
-        title: "Download failed",
-        description: "There was an error downloading the file.",
-        variant: "destructive"
-      });
-    }
-  };
-
   const handleDelete = async (id: string) => {
-    if (itemToDelete?.type === 'file') {
-      await deleteFile({ fileId: id, filePath: itemToDelete.path });
+    if (!itemToDelete) return;
+
+    if (itemToDelete.type === 'file') {
+      await deleteFile({ fileId: id, filePath: itemToDelete.path || '' });
     } else {
       await deleteFolder(id);
     }
@@ -95,7 +97,9 @@ export default function Files() {
   };
 
   const handleRename = async (id: string, newName: string) => {
-    if (itemToRename?.type === 'file') {
+    if (!itemToRename) return;
+
+    if (itemToRename.type === 'file') {
       await renameFile({ fileId: id, newName });
     } else {
       await renameFolder({ folderId: id, newName });
@@ -103,49 +107,30 @@ export default function Files() {
     setItemToRename(null);
     setRenameDialogOpen(false);
   };
-  
+
+  const handleMove = async (id: string, destinationFolderId: string) => {
+    if (!itemToMove) return;
+
+    if (itemToMove.type === 'file') {
+      await moveFile({ fileId: id, destinationFolderId });
+    } else {
+      await moveFolder({ folderId: id, destinationFolderId });
+    }
+    setItemToMove(null);
+    setMoveDialogOpen(false);
+  };
+
   // Navigate to a folder
   const navigateToFolder = (folderId: string, folderName: string) => {
     setCurrentFolderId(folderId);
-    
-    // Update breadcrumbs
-    setBreadcrumbs(prev => {
-      // Find if we're already in the breadcrumb trail
-      const existingIndex = prev.findIndex(crumb => crumb.id === folderId);
-      
-      if (existingIndex >= 0) {
-        // If we're navigating to a folder in our trail, trim the trail
-        return prev.slice(0, existingIndex + 1);
-      } else {
-        // Otherwise add to the trail
-        return [...prev, { id: folderId, name: folderName }];
-      }
-    });
+    setBreadcrumbs(prev => [...prev, { id: folderId, name: folderName }]);
   };
-  
+
   // Navigate using breadcrumbs
   const navigateToBreadcrumb = (index: number) => {
     const targetCrumb = breadcrumbs[index];
     setCurrentFolderId(targetCrumb.id);
     setBreadcrumbs(prev => prev.slice(0, index + 1));
-  };
-  
-  // Handle file click to open preview
-  const handleFileClick = (file: FileItem) => {
-    setSelectedFile(file);
-    setPreviewDialogOpen(true);
-  };
-  
-  // Open rename dialog for a file
-  const openRenameDialog = (item: {id: string, name: string, type: "file" | "folder"}) => {
-    setItemToRename(item);
-    setRenameDialogOpen(true);
-  };
-  
-  // Open delete dialog for a file or folder
-  const openDeleteDialog = (item: {id: string, name: string, type: "file" | "folder"}) => {
-    setItemToDelete(item);
-    setDeleteDialogOpen(true);
   };
 
   return (
@@ -154,201 +139,96 @@ export default function Files() {
         <h1 className="text-3xl font-bold">Files</h1>
         <p className="text-muted-foreground mt-1">Manage your project files</p>
       </div>
-      
-      {/* Breadcrumb navigation */}
-      <div className="bg-muted/30 rounded-md p-2">
-        <div className="flex items-center mb-1">
-          <FolderOpen className="h-4 w-4 text-muted-foreground mr-2" />
-          <span className="text-sm text-muted-foreground">Current location:</span>
-        </div>
-        <nav className="flex items-center flex-wrap space-x-1 text-sm">
-          {breadcrumbs.map((crumb, index) => (
-            <div key={index} className="flex items-center">
-              {index > 0 && <span className="mx-1 text-muted-foreground">/</span>}
-              <button
-                onClick={() => navigateToBreadcrumb(index)}
-                className={`hover:underline ${
-                  index === breadcrumbs.length - 1 
-                    ? "font-medium text-foreground" 
-                    : "text-muted-foreground"
-                }`}
-              >
-                {crumb.name}
-              </button>
-            </div>
-          ))}
-        </nav>
-      </div>
+
+      <BreadcrumbNav 
+        folderPath={breadcrumbs.slice(1)}
+        onNavigate={navigateToBreadcrumb}
+      />
 
       <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search files and folders..."
-            className="pl-9"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
+        <SearchBar 
+          value={searchQuery}
+          onChange={setSearchQuery}
+        />
         <div className="flex items-center gap-2">
-          <Button 
-            className="gap-2"
-            onClick={() => setUploadDialogOpen(true)}
-          >
-            <Upload className="h-4 w-4" />
-            Upload Files
-          </Button>
-          <Button 
-            variant="outline" 
-            className="gap-2"
-            onClick={() => setCreateFolderDialogOpen(true)}
-          >
-            <FolderPlus className="h-4 w-4" />
-            New Folder
-          </Button>
+          <ActionButtons
+            onUpload={() => setUploadDialogOpen(true)}
+            onCreateFolder={() => setCreateFolderDialogOpen(true)}
+          />
+          <ViewModeToggle
+            view={view}
+            onViewChange={setView}
+          />
         </div>
       </div>
 
-      {currentFolders.length === 0 && currentFiles.length === 0 ? (
-        // Empty state
-        <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-          <div className="w-20 h-20 rounded-full bg-creatively-purple/10 flex items-center justify-center mb-4">
-            <FolderOpen className="h-10 w-10 text-creatively-purple" />
-          </div>
-          <h3 className="text-xl font-semibold mb-2">
-            No files uploaded yet
-          </h3>
-          <p className="text-muted-foreground max-w-md mb-6">
-            Start by uploading your first project files or creating folders to organize your work.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Button 
-              className="gap-2"
-              onClick={() => setUploadDialogOpen(true)}
-            >
-              <Upload className="h-4 w-4" />
-              Upload Files
-            </Button>
-            <Button 
-              variant="outline" 
-              className="gap-2"
-              onClick={() => setCreateFolderDialogOpen(true)}
-            >
-              <FolderOpen className="h-4 w-4" />
-              Create Folder
-            </Button>
-          </div>
-        </div>
+      {isLoading ? (
+        <div>Loading...</div>
+      ) : filteredFolders.length === 0 && filteredFiles.length === 0 ? (
+        <EmptyState
+          onUpload={() => setUploadDialogOpen(true)}
+          onCreateFolder={() => setCreateFolderDialogOpen(true)}
+          currentFolderId={currentFolderId}
+        />
       ) : (
-        <>
-          {/* Folders section */}
-          {currentFolders.length > 0 && (
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold">Folders</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {currentFolders.map(folder => (
-                  <div 
-                    key={folder.id}
-                    className="bg-white rounded-lg border overflow-hidden transition-all hover:shadow-md cursor-pointer"
-                    onClick={() => navigateToFolder(folder.id, folder.name)}
-                  >
-                    <div className="aspect-square p-2">
-                      <div className="w-full h-full rounded-md bg-creatively-purple/10 flex flex-col items-center justify-center">
-                        <Folder className="h-12 w-12 text-creatively-purple" />
-                      </div>
-                    </div>
-                    <div className="p-3 border-t">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium truncate">{folder.name}</p>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <button className="p-1 rounded-full hover:bg-muted transition-colors">
-                              <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                              <span className="sr-only">Open menu</span>
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openRenameDialog({
-                              id: folder.id,
-                              name: folder.name,
-                              type: "folder"
-                            })}>
-                              Rename
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openDeleteDialog({
-                              id: folder.id,
-                              name: folder.name,
-                              type: "folder"
-                            })}>
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Files section */}
-          {currentFiles.length > 0 && (
-            <div className="space-y-4">
-              <h2 className="text-lg font-semibold">Files</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {currentFiles.map(file => (
-                  <div 
-                    key={file.id}
-                    className="bg-white rounded-lg border overflow-hidden transition-all hover:shadow-md cursor-pointer"
-                    onClick={() => handleFileClick(file)}
-                  >
-                    <div className="aspect-square p-2">
-                      <div className="w-full h-full rounded-md bg-muted/50 flex flex-col items-center justify-center">
-                        {getFileIcon(file.type)}
-                      </div>
-                    </div>
-                    <div className="p-3 border-t">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium truncate">{file.name}</p>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <button className="p-1 rounded-full hover:bg-muted transition-colors">
-                              <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                              <span className="sr-only">Open menu</span>
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleFileDownload(file)}>
-                              Download
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openRenameDialog({
-                              id: file.id,
-                              name: file.name,
-                              type: "file"
-                            })}>
-                              Rename
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => openDeleteDialog({
-                              id: file.id,
-                              name: file.name,
-                              type: "file"
-                            })}>
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </>
+        <FileList
+          files={filteredFiles}
+          folders={filteredFolders}
+          view={view}
+          onFileClick={(file) => {
+            setSelectedFile(file);
+            setPreviewDialogOpen(true);
+          }}
+          onFolderClick={navigateToFolder}
+          onFileDownload={async (fileId, filePath) => {
+            const url = await getFileUrl(filePath);
+            window.open(url, '_blank');
+          }}
+          onFileRename={(id) => {
+            const file = files?.find(f => f.id === id);
+            if (file) {
+              setItemToRename({ id, name: file.name, type: "file" });
+              setRenameDialogOpen(true);
+            }
+          }}
+          onFolderRename={(id) => {
+            const folder = folders?.find(f => f.id === id);
+            if (folder) {
+              setItemToRename({ id, name: folder.name, type: "folder" });
+              setRenameDialogOpen(true);
+            }
+          }}
+          onFileMove={(id) => {
+            const file = files?.find(f => f.id === id);
+            if (file) {
+              setItemToMove({ id, name: file.name, type: "file" });
+              setMoveDialogOpen(true);
+            }
+          }}
+          onFolderMove={(id) => {
+            const folder = folders?.find(f => f.id === id);
+            if (folder) {
+              setItemToMove({ id, name: folder.name, type: "folder" });
+              setMoveDialogOpen(true);
+            }
+          }}
+          onFileDelete={(id) => {
+            const file = files?.find(f => f.id === id);
+            if (file) {
+              setItemToDelete({ id, name: file.name, type: "file", path: file.path });
+              setDeleteDialogOpen(true);
+            }
+          }}
+          onFolderDelete={(id) => {
+            const folder = folders?.find(f => f.id === id);
+            if (folder) {
+              setItemToDelete({ id, name: folder.name, type: "folder" });
+              setDeleteDialogOpen(true);
+            }
+          }}
+        />
       )}
-      
-      {/* Dialogs */}
+
       <UploadDialog
         open={uploadDialogOpen}
         onOpenChange={setUploadDialogOpen}
@@ -388,6 +268,19 @@ export default function Files() {
           itemId={itemToDelete.id}
           itemName={itemToDelete.name}
           itemType={itemToDelete.type}
+        />
+      )}
+      
+      {itemToMove && folders && (
+        <MoveDialog
+          open={moveDialogOpen}
+          onOpenChange={setMoveDialogOpen}
+          onMove={handleMove}
+          itemId={itemToMove.id}
+          itemName={itemToMove.name}
+          itemType={itemToMove.type}
+          currentFolderId={currentFolderId}
+          folders={folders}
         />
       )}
     </div>
