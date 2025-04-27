@@ -1,14 +1,17 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { FileItem, FolderItem } from "@/types/files";
 
 export async function uploadFile(file: File, parentFolderId: string | null = null) {
   try {
+    // Get the current user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
     // First upload to storage
     const fileExt = file.name.split('.').pop();
     const filePath = `${crypto.randomUUID()}.${fileExt}`;
     
-    const { error: uploadError, data: uploadData } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('file_uploads')
       .upload(filePath, file);
       
@@ -24,6 +27,7 @@ export async function uploadFile(file: File, parentFolderId: string | null = nul
         content_type: file.type,
         path: filePath,
         parent_folder_id: parentFolderId,
+        user_id: user.id
       })
       .select()
       .single();
@@ -38,11 +42,16 @@ export async function uploadFile(file: File, parentFolderId: string | null = nul
 
 export async function createFolder(name: string, parentFolderId: string | null = null) {
   try {
+    // Get the current user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
     const { error, data } = await supabase
       .from('folders')
       .insert({
         name,
         parent_folder_id: parentFolderId,
+        user_id: user.id
       })
       .select()
       .single();

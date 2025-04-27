@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import * as fileService from '@/lib/services/file-service';
@@ -22,7 +21,7 @@ export function useFiles(parentFolderId: string | null = null) {
         .eq('parent_folder_id', parentFolderId);
       
       if (error) throw error;
-      return data;
+      return data as FileItem[];
     }
   });
 
@@ -39,13 +38,19 @@ export function useFiles(parentFolderId: string | null = null) {
         .eq('parent_folder_id', parentFolderId);
       
       if (error) throw error;
-      return data;
+      
+      const foldersWithCount = (data || []).map(folder => ({
+        ...folder,
+        fileCount: 0
+      }));
+      
+      return foldersWithCount as FolderItem[];
     }
   });
 
   // Upload file mutation
   const uploadFileMutation = useMutation({
-    mutationFn: ({ file, parentFolderId }: { file: File; parentFolderId: string | null }) =>
+    mutationFn: ({ file, parentFolderId }: { file: File; parentFolderId: string }) =>
       fileService.uploadFile(file, parentFolderId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['files', parentFolderId] });
@@ -65,7 +70,7 @@ export function useFiles(parentFolderId: string | null = null) {
 
   // Create folder mutation
   const createFolderMutation = useMutation({
-    mutationFn: ({ name, parentFolderId }: { name: string; parentFolderId: string | null }) =>
+    mutationFn: ({ name, parentFolderId }: { name: string; parentFolderId: string }) =>
       fileService.createFolder(name, parentFolderId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['folders', parentFolderId] });
@@ -167,10 +172,10 @@ export function useFiles(parentFolderId: string | null = null) {
     error: filesError || foldersError,
     uploadFile: uploadFileMutation.mutateAsync,
     createFolder: createFolderMutation.mutateAsync,
-    deleteFile: deleteFileMutation.mutateAsync,
-    deleteFolder: deleteFolderMutation.mutateAsync,
-    renameFile: renameFileMutation.mutateAsync,
-    renameFolder: renameFolderMutation.mutateAsync,
+    deleteFile: fileService.deleteFile,
+    deleteFolder: fileService.deleteFolder,
+    renameFile: fileService.renameFile,
+    renameFolder: fileService.renameFolder,
     getFileUrl: fileService.getFileUrl,
   };
 }

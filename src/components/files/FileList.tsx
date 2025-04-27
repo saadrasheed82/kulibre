@@ -49,7 +49,10 @@ export function FileList({
             {folders.map(folder => (
               <FolderCard
                 key={folder.id}
-                {...folder}
+                id={folder.id}
+                name={folder.name}
+                fileCount={folder.fileCount || 0}
+                modifiedAt={new Date(folder.updated_at)}
                 view={view}
                 onOpen={() => onFolderClick(folder.id, folder.name)}
                 onRename={() => onFolderRename(folder.id)}
@@ -72,13 +75,18 @@ export function FileList({
             {files.map(file => (
               <FileCard
                 key={file.id}
-                {...file}
-                view={view}
+                id={file.id}
+                name={file.name}
+                type={file.type}
+                size={file.size}
+                modifiedAt={new Date(file.updated_at)}
+                onShare={() => {}}
                 onClick={() => onFileClick(file)}
                 onDownload={() => onFileDownload(file.id, file.path)}
                 onRename={() => onFileRename(file.id)}
                 onMove={() => onFileMove(file.id)}
                 onDelete={() => onFileDelete(file.id)}
+                view={view}
               />
             ))}
           </div>

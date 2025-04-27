@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useFiles } from "@/hooks/useFiles";
 import { FilePreviewDialog } from "@/components/files/FilePreviewDialog";
@@ -13,7 +12,7 @@ import { ActionButtons } from "@/components/files/ActionButtons";
 import { SearchBar } from "@/components/files/SearchBar";
 import { ViewModeToggle } from "@/components/files/ViewModeToggle";
 import { FileList } from "@/components/files/FileList";
-import { FileItem } from "@/types/files";
+import type { FileItem } from "@/types/files";
 
 export default function Files() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -51,8 +50,6 @@ export default function Files() {
     deleteFolder,
     renameFile,
     renameFolder,
-    moveFile,
-    moveFolder,
     getFileUrl
   } = useFiles(currentFolderId);
 
@@ -68,7 +65,7 @@ export default function Files() {
   // Handle file and folder operations
   const handleUploadComplete = async (file: File) => {
     try {
-      await uploadFile(file);
+      await uploadFile({ file, parentFolderId: currentFolderId || '' });
       setUploadDialogOpen(false);
     } catch (error) {
       console.error('Upload error:', error);
@@ -77,7 +74,7 @@ export default function Files() {
 
   const handleCreateFolder = async (name: string) => {
     try {
-      await createFolder(name);
+      await createFolder({ name, parentFolderId: currentFolderId || '' });
       setCreateFolderDialogOpen(false);
     } catch (error) {
       console.error('Create folder error:', error);
@@ -108,18 +105,6 @@ export default function Files() {
     setRenameDialogOpen(false);
   };
 
-  const handleMove = async (id: string, destinationFolderId: string) => {
-    if (!itemToMove) return;
-
-    if (itemToMove.type === 'file') {
-      await moveFile({ fileId: id, destinationFolderId });
-    } else {
-      await moveFolder({ folderId: id, destinationFolderId });
-    }
-    setItemToMove(null);
-    setMoveDialogOpen(false);
-  };
-
   // Navigate to a folder
   const navigateToFolder = (folderId: string, folderName: string) => {
     setCurrentFolderId(folderId);
@@ -142,7 +127,7 @@ export default function Files() {
 
       <BreadcrumbNav 
         folderPath={breadcrumbs.slice(1)}
-        onNavigate={navigateToBreadcrumb}
+        onNavigate={(_, index) => navigateToBreadcrumb(index)}
       />
 
       <div className="flex flex-col sm:flex-row gap-3">

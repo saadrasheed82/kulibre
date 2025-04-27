@@ -1,5 +1,5 @@
 
-import { ViewGrid, ViewList } from "lucide-react";
+import { Grid2X2, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface ViewModeToggleProps {
@@ -15,7 +15,7 @@ export function ViewModeToggle({ view, onViewChange }: ViewModeToggleProps) {
         size="icon"
         onClick={() => onViewChange("grid")}
       >
-        <ViewGrid className="h-4 w-4" />
+        <Grid2X2 className="h-4 w-4" />
         <span className="sr-only">Grid view</span>
       </Button>
       <Button
@@ -23,7 +23,7 @@ export function ViewModeToggle({ view, onViewChange }: ViewModeToggleProps) {
         size="icon"
         onClick={() => onViewChange("list")}
       >
-        <ViewList className="h-4 w-4" />
+        <List className="h-4 w-4" />
         <span className="sr-only">List view</span>
       </Button>
     </div>

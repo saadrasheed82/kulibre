@@ -3,10 +3,11 @@ export interface FileItem {
   id: string;
   name: string;
   type: "document" | "image" | "video";
-  parentId: string | null;
-  path: string;
   size: number;
   content_type: string;
+  path: string;
+  parent_folder_id: string | null;
+  user_id: string;
   created_at: string;
   updated_at: string;
 }
@@ -14,7 +15,9 @@ export interface FileItem {
 export interface FolderItem {
   id: string;
   name: string;
-  parentId: string | null;
+  parent_folder_id: string | null;
+  user_id: string;
   created_at: string;
   updated_at: string;
+  fileCount?: number;
 }
