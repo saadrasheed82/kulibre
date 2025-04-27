@@ -32,7 +32,7 @@ export function MobileNavigation() {
           <nav className="flex-1 overflow-auto p-4 space-y-1">
             <MobileNavItem 
               icon={<Home className="w-5 h-5" />} 
-              href="/" 
+              href="/dashboard" 
               label="Dashboard" 
               active 
               onClick={() => setOpen(false)} 

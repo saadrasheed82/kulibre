@@ -18,7 +18,7 @@ export function Sidebar({ className }: SidebarProps) {
       </div>
 
       <nav className="space-y-1">
-        <NavItem icon={<Home className="w-5 h-5" />} href="/" label="Dashboard" active />
+        <NavItem icon={<Home className="w-5 h-5" />} href="/dashboard" label="Dashboard" active />
         <NavItem icon={<FolderKanban className="w-5 h-5" />} href="/projects" label="Projects" />
         <NavItem icon={<Calendar className="w-5 h-5" />} href="/calendar" label="Calendar" />
         <NavItem icon={<File className="w-5 h-5" />} href="/files" label="Files" />
