@@ -25,17 +25,6 @@ export function Sidebar({ className }: SidebarProps) {
         <NavItem icon={<Users className="w-5 h-5" />} href="/team" label="Team" />
         <NavItem icon={<Settings className="w-5 h-5" />} href="/settings" label="Settings" />
       </nav>
-
-      <div className="absolute bottom-8 left-4 right-4">
-        <div className="bg-creatively-purple/10 rounded-lg p-4">
-          <h3 className="font-medium text-sm">Free Plan</h3>
-          <p className="text-xs text-muted-foreground mt-1">2/5 projects used</p>
-          <div className="mt-2 h-1.5 bg-creatively-purple/20 rounded-full">
-            <div className="h-full bg-creatively-purple rounded-full w-2/5"></div>
-          </div>
-          <button className="mt-3 text-xs text-creatively-purple font-medium">Upgrade Plan</button>
-        </div>
-      </div>
     </div>
   );
 }
