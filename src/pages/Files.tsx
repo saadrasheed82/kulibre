@@ -1,48 +1,22 @@
-
 import { useState } from "react";
-import { 
-  Upload, 
-  FolderPlus, 
-  Search,
-  Folder,
-  FileText,
-  FileImage,
-  FileVideo,
-  MoreVertical,
-  FolderOpen
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { useFiles } from "@/hooks/useFiles";
 import { UploadDialog } from "@/components/files/UploadDialog";
 import { CreateFolderDialog } from "@/components/files/CreateFolderDialog";
-import { FilePreviewDialog } from "@/components/files/FilePreviewDialog";
 import { RenameDialog } from "@/components/files/RenameDialog";
 import { DeleteDialog } from "@/components/files/DeleteDialog";
-import { FileItem, FolderItem } from "@/types/files";
-
-// Sample data
-const sampleFolders: FolderItem[] = [
-  { id: "folder-1", name: "Brand Assets", parentId: null },
-  { id: "folder-2", name: "Marketing Materials", parentId: null },
-  { id: "folder-3", name: "Client Presentations", parentId: null }
-];
-
-const sampleFiles: FileItem[] = [
-  { id: "file-1", name: "Project Proposal.pdf", type: "document", parentId: null },
-  { id: "file-2", name: "Logo Design.png", type: "image", parentId: null },
-  { id: "file-3", name: "Product Demo.mp4", type: "video", parentId: null }
-];
+import { FilePreviewDialog } from "@/components/files/FilePreviewDialog";
+import { FileCard } from "@/components/files/FileCard";
+import { FolderCard } from "@/components/files/FolderCard";
+import { EmptyState } from "@/components/files/EmptyState";
+import { BreadcrumbNav } from "@/components/files/BreadcrumbNav";
+import { FileItem } from "@/types/files";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Search, Upload, FolderPlus } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Files() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [folders, setFolders] = useState<FolderItem[]>([]);
-  const [files, setFiles] = useState<FileItem[]>([]);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [createFolderDialogOpen, setCreateFolderDialogOpen] = useState(false);
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
@@ -59,10 +33,76 @@ export default function Files() {
   // Delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{id: string, name: string, type: "file" | "folder"} | null>(null);
-  
-  // Filter items based on current folder
-  const currentFolders = folders.filter(folder => folder.parentId === currentFolderId);
-  const currentFiles = files.filter(file => file.parentId === currentFolderId);
+
+  const {
+    files,
+    folders,
+    isLoading,
+    uploadFile,
+    createFolder,
+    deleteFile,
+    deleteFolder,
+    renameFile,
+    renameFolder,
+    getFileUrl
+  } = useFiles(currentFolderId);
+
+  const { toast } = useToast();
+
+  const handleUploadComplete = async (file: File) => {
+    try {
+      await uploadFile({ file, parentFolderId: currentFolderId });
+      setUploadDialogOpen(false);
+    } catch (error) {
+      console.error('Upload error:', error);
+    }
+  };
+
+  const handleCreateFolder = async (name: string) => {
+    try {
+      await createFolder({ name, parentFolderId: currentFolderId });
+      setCreateFolderDialogOpen(false);
+    } catch (error) {
+      console.error('Create folder error:', error);
+    }
+  };
+
+  const handleFileDownload = async (fileId: string, filePath: string) => {
+    try {
+      const url = await getFileUrl(filePath);
+      const link = document.createElement('a');
+      link.href = url;
+      link.target = '_blank';
+      link.click();
+    } catch (error) {
+      console.error('Download error:', error);
+      toast({
+        title: "Download failed",
+        description: "There was an error downloading the file.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (itemToDelete?.type === 'file') {
+      await deleteFile({ fileId: id, filePath: itemToDelete.path });
+    } else {
+      await deleteFolder(id);
+    }
+    setItemToDelete(null);
+    setDeleteDialogOpen(false);
+  };
+
+  const handleRename = async (id: string, newName: string) => {
+    if (itemToRename?.type === 'file') {
+      await renameFile({ fileId: id, newName });
+    } else {
+      await renameFolder({ folderId: id, newName });
+    }
+    setItemToRename(null);
+    setRenameDialogOpen(false);
+  };
   
   // Navigate to a folder
   const navigateToFolder = (folderId: string, folderName: string) => {
@@ -96,161 +136,16 @@ export default function Files() {
     setPreviewDialogOpen(true);
   };
   
-  // Handle file download
-  const handleFileDownload = (file: FileItem) => {
-    // In a real app, this would trigger a file download
-    alert(`Downloading file: ${file.name}`);
-  };
-  
   // Open rename dialog for a file
   const openRenameDialog = (item: {id: string, name: string, type: "file" | "folder"}) => {
     setItemToRename(item);
     setRenameDialogOpen(true);
   };
   
-  // Handle item rename
-  const handleRename = (itemId: string, newName: string) => {
-    if (itemToRename?.type === "file") {
-      // Update the file name in state
-      setFiles(prevFiles => 
-        prevFiles.map(file => 
-          file.id === itemId 
-            ? { ...file, name: newName } 
-            : file
-        )
-      );
-      
-      // If this is the selected file, update it too
-      if (selectedFile && selectedFile.id === itemId) {
-        setSelectedFile({ ...selectedFile, name: newName });
-      }
-    } else {
-      // Update the folder name in state
-      setFolders(prevFolders => 
-        prevFolders.map(folder => 
-          folder.id === itemId 
-            ? { ...folder, name: newName } 
-            : folder
-        )
-      );
-      
-      // Update breadcrumb if needed
-      setBreadcrumbs(prev => 
-        prev.map(crumb => 
-          crumb.id === itemId 
-            ? { ...crumb, name: newName } 
-            : crumb
-        )
-      );
-    }
-  };
-  
   // Open delete dialog for a file or folder
   const openDeleteDialog = (item: {id: string, name: string, type: "file" | "folder"}) => {
     setItemToDelete(item);
     setDeleteDialogOpen(true);
-  };
-  
-  // Handle item delete
-  const handleDelete = (itemId: string) => {
-    if (itemToDelete?.type === "file") {
-      // Remove the file from state
-      setFiles(prevFiles => prevFiles.filter(file => file.id !== itemId));
-      
-      // If this is the selected file and the preview is open, close it
-      if (selectedFile && selectedFile.id === itemId && previewDialogOpen) {
-        setPreviewDialogOpen(false);
-      }
-    } else {
-      // Remove the folder from state
-      setFolders(prevFolders => prevFolders.filter(folder => folder.id !== itemId));
-      
-      // Also remove any files and subfolders inside this folder
-      setFiles(prevFiles => prevFiles.filter(file => file.parentId !== itemId));
-      setFolders(prevFolders => prevFolders.filter(folder => folder.parentId !== itemId));
-      
-      // If we're currently in this folder, navigate back to parent
-      if (currentFolderId === itemId) {
-        // Find the parent folder in breadcrumbs
-        const parentIndex = breadcrumbs.length - 2;
-        if (parentIndex >= 0) {
-          navigateToBreadcrumb(parentIndex);
-        }
-      }
-    }
-  };
-  
-  const handleUploadComplete = () => {
-    // In a real app, you would make an API call to upload the file
-    // For now, we'll simulate adding a new file with a random type
-    
-    // Generate a random file type and name
-    const fileTypes = ["document", "image", "video"];
-    const fileExtensions = {
-      document: ["pdf", "docx", "txt"],
-      image: ["png", "jpg", "gif"],
-      video: ["mp4", "mov", "avi"]
-    };
-    
-    const randomType = fileTypes[Math.floor(Math.random() * fileTypes.length)] as "document" | "image" | "video";
-    const extensions = fileExtensions[randomType];
-    const randomExt = extensions[Math.floor(Math.random() * extensions.length)];
-    
-    const fileNames = {
-      document: ["Project Brief", "Meeting Notes", "Contract", "Proposal"],
-      image: ["Logo Design", "Banner", "Product Photo", "Team Portrait"],
-      video: ["Product Demo", "Client Testimonial", "Tutorial", "Promo Video"]
-    };
-    
-    const names = fileNames[randomType];
-    const randomName = names[Math.floor(Math.random() * names.length)];
-    
-    const newFile = {
-      id: `file-${Date.now()}`,
-      name: `${randomName}.${randomExt}`,
-      type: randomType,
-      parentId: currentFolderId
-    };
-    
-    setFiles(prevFiles => [...prevFiles, newFile]);
-  };
-  
-  const handleCreateFolder = (name: string) => {
-    // In a real app, you would make an API call to create the folder
-    // For now, we'll simulate adding a new folder
-    
-    // Check if folder with same name already exists in current folder
-    const folderExists = folders.some(folder => 
-      folder.parentId === currentFolderId && 
-      folder.name.toLowerCase() === name.toLowerCase()
-    );
-    
-    if (folderExists) {
-      // In a real app, you would show an error message
-      console.error(`Folder "${name}" already exists in this location`);
-      return;
-    }
-    
-    const newFolder = {
-      id: `folder-${Date.now()}`,
-      name: name,
-      parentId: currentFolderId
-    };
-    
-    setFolders(prevFolders => [...prevFolders, newFolder]);
-  };
-
-  // Get file icon based on type
-  const getFileIcon = (type: string) => {
-    switch (type) {
-      case "image":
-        return <FileImage className="h-10 w-10 text-creatively-blue" />;
-      case "video":
-        return <FileVideo className="h-10 w-10 text-creatively-orange" />;
-      case "document":
-      default:
-        return <FileText className="h-10 w-10 text-creatively-purple" />;
-    }
   };
 
   return (
