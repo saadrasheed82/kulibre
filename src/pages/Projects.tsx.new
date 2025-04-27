@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -58,28 +59,6 @@ interface Project {
   priority?: 'Low' | 'Medium' | 'High';
   team_members?: string[];
 }
-
-// Define database status to display status mapping
-type DbStatus = Database["public"]["Enums"]["project_status"];
-type DisplayStatus = 'Not Started' | 'In Progress' | 'Awaiting Feedback' | 'Approved' | 'Completed' | 'Archived';
-
-const dbToDisplayStatus: Record<DbStatus, DisplayStatus> = {
-  'draft': 'Not Started',
-  'in_progress': 'In Progress',
-  'review': 'Awaiting Feedback',
-  'approved': 'Approved',
-  'completed': 'Completed',
-  'archived': 'Archived'
-};
-
-const displayToDbStatus: Record<DisplayStatus, DbStatus> = {
-  'Not Started': 'draft',
-  'In Progress': 'in_progress',
-  'Awaiting Feedback': 'review',
-  'Approved': 'approved',
-  'Completed': 'completed',
-  'Archived': 'archived'
-};
 
 // Status color mapping
 const statusColors = {
@@ -233,7 +212,13 @@ export default function Projects() {
           }
           
           // Map database status to display status
-          const displayStatus = dbToDisplayStatus[project.status as DbStatus] || 'Not Started';
+          let displayStatus = project.status;
+          if (project.status === 'draft') displayStatus = 'Not Started';
+          else if (project.status === 'in_progress') displayStatus = 'In Progress';
+          else if (project.status === 'review') displayStatus = 'Awaiting Feedback';
+          else if (project.status === 'approved') displayStatus = 'Approved';
+          else if (project.status === 'archived') displayStatus = 'Archived';
+          else if (project.status === 'completed') displayStatus = 'Completed';
           
           // Determine priority based on due date and progress
           let priority: 'Low' | 'Medium' | 'High' = 'Medium';
@@ -410,10 +395,16 @@ export default function Projects() {
   };
   
   // Function to update project status
-  const handleUpdateProjectStatus = async (projectId: string, newStatus: DisplayStatus) => {
+  const handleUpdateProjectStatus = async (projectId: string, newStatus: string) => {
     try {
       // Map display status back to database status
-      const dbStatus = displayToDbStatus[newStatus];
+      let dbStatus: Database["public"]["Enums"]["project_status"] = "draft";
+      if (newStatus === 'Not Started') dbStatus = "draft";
+      else if (newStatus === 'In Progress') dbStatus = "in_progress";
+      else if (newStatus === 'Awaiting Feedback') dbStatus = "review";
+      else if (newStatus === 'Approved') dbStatus = "approved";
+      else if (newStatus === 'Completed') dbStatus = "completed";
+      else if (newStatus === 'Archived') dbStatus = "archived";
       
       const { error } = await supabase
         .from('projects')
@@ -441,7 +432,7 @@ export default function Projects() {
       const { error } = await supabase
         .from('projects')
         .update({ 
-          status: "archived" as DbStatus, 
+          status: "archived" as Database["public"]["Enums"]["project_status"], 
           updated_at: new Date().toISOString() 
         })
         .eq('id', projectId);
@@ -469,6 +460,7 @@ export default function Projects() {
   };
 
   return (
+    <Layout>
       <div className="space-y-8">
         <div className="flex justify-between items-center">
           <div>
@@ -1034,5 +1026,6 @@ export default function Projects() {
           </div>
         )}
       </div>
+    </Layout>
   );
 }

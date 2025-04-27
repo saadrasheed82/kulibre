@@ -16,9 +16,54 @@ import {
   CheckCircle
 } from 'lucide-react';
 
+// Custom CSS for floating animations
+const floatingLogoStyles = `
+  @keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+    100% { transform: translateY(0px); }
+  }
+  
+  @keyframes floatSlow {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-5px); }
+    100% { transform: translateY(0px); }
+  }
+  
+  .float-animation {
+    animation: float 3s ease-in-out infinite;
+  }
+  
+  .float-animation-slow {
+    animation: floatSlow 5s ease-in-out infinite;
+  }
+  
+  .float-delay-1 {
+    animation-delay: 1s;
+  }
+  
+  .float-delay-2 {
+    animation-delay: 2s;
+  }
+  
+  .float-delay-3 {
+    animation-delay: 0.5s;
+  }
+  
+  .float-delay-4 {
+    animation-delay: 1.5s;
+  }
+  
+  .float-delay-5 {
+    animation-delay: 0.7s;
+  }
+`;
+
 export default function Landing() {
   return (
     <div className="min-h-screen flex flex-col">
+      {/* Add the custom CSS for floating animations */}
+      <style dangerouslySetInnerHTML={{ __html: floatingLogoStyles }} />
       {/* Sticky Navbar */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100 p-4 md:px-6">
         <div className="container mx-auto flex justify-between items-center">
@@ -68,11 +113,101 @@ export default function Landing() {
             </div>
             <div className="mt-16 relative">
               <div className="absolute inset-0 bg-gradient-to-t from-white to-transparent z-10 h-16 bottom-0 top-auto"></div>
+              
+              {/* Feature Highlights */}
+              <div className="absolute -top-6 left-10 z-20 float-animation-slow hover:scale-105 transition-transform duration-300">
+                <div className="bg-white p-3 rounded-lg shadow-lg flex items-center space-x-2 border-l-4 border-creatively-purple">
+                  <Calendar className="h-5 w-5 text-creatively-purple" />
+                  <div>
+                    <p className="text-sm font-semibold">Project Planning</p>
+                    <p className="text-xs text-gray-500">Visualize timelines</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="absolute -top-6 right-10 z-20 float-animation float-delay-1 hover:scale-105 transition-transform duration-300">
+                <div className="bg-white p-3 rounded-lg shadow-lg flex items-center space-x-2 border-l-4 border-creatively-orange">
+                  <Users className="h-5 w-5 text-creatively-orange" />
+                  <div>
+                    <p className="text-sm font-semibold">Team Collaboration</p>
+                    <p className="text-xs text-gray-500">Work together seamlessly</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="absolute bottom-10 left-10 z-20 float-animation-slow float-delay-3 hover:scale-105 transition-transform duration-300">
+                <div className="bg-white p-3 rounded-lg shadow-lg flex items-center space-x-2 border-l-4 border-creatively-yellow">
+                  <Zap className="h-5 w-5 text-creatively-yellow" />
+                  <div>
+                    <p className="text-sm font-semibold">Automated Workflows</p>
+                    <p className="text-xs text-gray-500">Save time with automation</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="absolute bottom-10 right-10 z-20 float-animation float-delay-4 hover:scale-105 transition-transform duration-300">
+                <div className="bg-white p-3 rounded-lg shadow-lg flex items-center space-x-2 border-l-4 border-creatively-blue">
+                  <BarChart2 className="h-5 w-5 text-creatively-blue" />
+                  <div>
+                    <p className="text-sm font-semibold">Advanced Analytics</p>
+                    <p className="text-xs text-gray-500">Data-driven insights</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="absolute top-1/3 right-5 z-20 float-animation-slow float-delay-5 hover:scale-105 transition-transform duration-300">
+                <div className="bg-white p-3 rounded-lg shadow-lg flex items-center space-x-2 border-l-4 border-creatively-pink">
+                  <DollarSign className="h-5 w-5 text-creatively-pink" />
+                  <div>
+                    <p className="text-sm font-semibold">Budget Tracking</p>
+                    <p className="text-xs text-gray-500">Monitor project costs</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="absolute top-1/2 left-5 z-20 float-animation float-delay-2 hover:scale-105 transition-transform duration-300">
+                <div className="bg-white p-3 rounded-lg shadow-lg flex items-center space-x-2 border-l-4 border-green-500">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <div>
+                    <p className="text-sm font-semibold">Client Approvals</p>
+                    <p className="text-xs text-gray-500">Streamlined feedback</p>
+                  </div>
+                </div>
+              </div>
+              
               <img 
-                src="https://loremflickr.com/1200/600/dashboard,design/all" 
+                src="https://images.unsplash.com/photo-1531403009284-440f080d1e12?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1200&h=600&q=80" 
                 alt="Creatively Dashboard" 
                 className="rounded-lg shadow-2xl border border-gray-200 mx-auto"
               />
+            </div>
+            
+            {/* Key Benefits */}
+            <div className="mt-16 text-center">
+              <p className="text-sm uppercase tracking-wider text-muted-foreground mb-6">Key Benefits</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+                <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                  <div className="rounded-full bg-creatively-purple/10 w-12 h-12 flex items-center justify-center mx-auto mb-4">
+                    <CheckCircle className="h-6 w-6 text-creatively-purple" />
+                  </div>
+                  <h3 className="font-semibold mb-2">Streamlined Workflows</h3>
+                  <p className="text-sm text-gray-500">Reduce project delivery time by up to 40% with optimized processes</p>
+                </div>
+                <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                  <div className="rounded-full bg-creatively-blue/10 w-12 h-12 flex items-center justify-center mx-auto mb-4">
+                    <Users className="h-6 w-6 text-creatively-blue" />
+                  </div>
+                  <h3 className="font-semibold mb-2">Enhanced Collaboration</h3>
+                  <p className="text-sm text-gray-500">Keep everyone aligned with real-time updates and communication</p>
+                </div>
+                <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                  <div className="rounded-full bg-creatively-green/10 w-12 h-12 flex items-center justify-center mx-auto mb-4">
+                    <BarChart2 className="h-6 w-6 text-green-600" />
+                  </div>
+                  <h3 className="font-semibold mb-2">Data-Driven Insights</h3>
+                  <p className="text-sm text-gray-500">Make informed decisions with comprehensive analytics and reporting</p>
+                </div>
+              </div>
             </div>
           </div>
         </section>

@@ -40,6 +40,8 @@ export default function App() {
             <Route path="/projects" element={<Layout><Projects /></Layout>} />
             <Route path="/projects/new" element={<Layout><ProjectDetails /></Layout>} />
             <Route path="/projects/:id" element={<Layout><ProjectDetails /></Layout>} />
+            {/* Fallback route for invalid project IDs */}
+            <Route path="/projects/error" element={<Layout><Projects /></Layout>} />
             <Route path="/calendar" element={<Layout><Calendar /></Layout>} />
             <Route path="/files" element={<Layout><Files /></Layout>} />
             <Route path="/team" element={<Layout><Team /></Layout>} />

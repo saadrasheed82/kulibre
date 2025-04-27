@@ -15,7 +15,7 @@ export interface CreateFolderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreateFolder: (name: string) => void;
-  parentFolderId?: string;
+  parentFolderId: string | null;
 }
 
 export function CreateFolderDialog({
@@ -28,7 +28,7 @@ export function CreateFolderDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validate folder name
@@ -37,16 +37,32 @@ export function CreateFolderDialog({
       return;
     }
     
+    // Validate folder name format
+    if (folderName.includes('/') || folderName.includes('\\')) {
+      setError("Folder name cannot contain slashes");
+      return;
+    }
+    
+    if (folderName.length > 255) {
+      setError("Folder name is too long");
+      return;
+    }
+    
     setError("");
     setIsSubmitting(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      onCreateFolder(folderName);
-      setIsSubmitting(false);
+    try {
+      // Actually create the folder
+      await onCreateFolder(folderName.trim());
       setFolderName("");
+      // Only close the dialog on success
       onOpenChange(false);
-    }, 500);
+    } catch (error) {
+      console.error("Folder creation error:", error);
+      setError(error instanceof Error ? error.message : "Failed to create folder");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

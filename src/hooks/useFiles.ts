@@ -15,14 +15,25 @@ export function useFiles(parentFolderId: string | null = null) {
   } = useQuery({
     queryKey: ['files', parentFolderId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('files')
         .select('*')
-        .eq('parent_folder_id', parentFolderId);
+        .order('name', { ascending: true });
       
-      if (error) throw error;
+      // Handle null parent folder ID differently
+      if (parentFolderId === null) {
+        query = query.is('parent_folder_id', null);
+      } else {
+        query = query.eq('parent_folder_id', parentFolderId);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) throw new Error(`Error fetching files: ${error.message}`);
       return data as FileItem[];
-    }
+    },
+    staleTime: 30000, // 30 seconds
+    retry: 1
   });
 
   const {
@@ -32,27 +43,47 @@ export function useFiles(parentFolderId: string | null = null) {
   } = useQuery({
     queryKey: ['folders', parentFolderId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('folders')
         .select('*')
-        .eq('parent_folder_id', parentFolderId);
+        .order('name', { ascending: true });
       
-      if (error) throw error;
+      // Handle null parent folder ID differently
+      if (parentFolderId === null) {
+        query = query.is('parent_folder_id', null);
+      } else {
+        query = query.eq('parent_folder_id', parentFolderId);
+      }
       
-      const foldersWithCount = (data || []).map(folder => ({
-        ...folder,
-        fileCount: 0
+      const { data, error } = await query;
+      
+      if (error) throw new Error(`Error fetching folders: ${error.message}`);
+      
+      // Get file counts for each folder (optional, can be removed if causing performance issues)
+      const foldersWithCount = await Promise.all((data || []).map(async folder => {
+        const { count, error: countError } = await supabase
+          .from('files')
+          .select('*', { count: 'exact', head: true })
+          .eq('parent_folder_id', folder.id);
+          
+        return {
+          ...folder,
+          fileCount: countError ? 0 : (count || 0)
+        };
       }));
       
       return foldersWithCount as FolderItem[];
-    }
+    },
+    staleTime: 30000, // 30 seconds
+    retry: 1
   });
 
   // Upload file mutation
   const uploadFileMutation = useMutation({
-    mutationFn: ({ file, parentFolderId }: { file: File; parentFolderId: string }) =>
+    mutationFn: ({ file, parentFolderId }: { file: File; parentFolderId: string | null }) =>
       fileService.uploadFile(file, parentFolderId),
     onSuccess: () => {
+      // Invalidate the specific query for the current folder
       queryClient.invalidateQueries({ queryKey: ['files', parentFolderId] });
       toast({
         title: "File uploaded",
@@ -60,9 +91,10 @@ export function useFiles(parentFolderId: string | null = null) {
       });
     },
     onError: (error) => {
+      console.error('Upload error:', error);
       toast({
         title: "Upload failed",
-        description: "There was an error uploading your file.",
+        description: error instanceof Error ? error.message : "There was an error uploading your file.",
         variant: "destructive"
       });
     }
@@ -70,9 +102,10 @@ export function useFiles(parentFolderId: string | null = null) {
 
   // Create folder mutation
   const createFolderMutation = useMutation({
-    mutationFn: ({ name, parentFolderId }: { name: string; parentFolderId: string }) =>
+    mutationFn: ({ name, parentFolderId }: { name: string; parentFolderId: string | null }) =>
       fileService.createFolder(name, parentFolderId),
     onSuccess: () => {
+      // Invalidate the specific query for the current folder
       queryClient.invalidateQueries({ queryKey: ['folders', parentFolderId] });
       toast({
         title: "Folder created",
@@ -80,9 +113,10 @@ export function useFiles(parentFolderId: string | null = null) {
       });
     },
     onError: (error) => {
+      console.error('Create folder error:', error);
       toast({
         title: "Creation failed",
-        description: "There was an error creating your folder.",
+        description: error instanceof Error ? error.message : "There was an error creating your folder.",
         variant: "destructive"
       });
     }
@@ -164,6 +198,45 @@ export function useFiles(parentFolderId: string | null = null) {
       });
     }
   });
+  
+  // Move mutations
+  const moveFileMutation = useMutation({
+    mutationFn: ({ fileId, newFolderId }: { fileId: string; newFolderId: string | null }) =>
+      fileService.moveFile(fileId, newFolderId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['files'] });
+      toast({
+        title: "File moved",
+        description: "The file has been moved successfully."
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Move failed",
+        description: "There was an error moving the file.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const moveFolderMutation = useMutation({
+    mutationFn: ({ folderId, newParentFolderId }: { folderId: string; newParentFolderId: string | null }) =>
+      fileService.moveFolder(folderId, newParentFolderId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['folders'] });
+      toast({
+        title: "Folder moved",
+        description: "The folder has been moved successfully."
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Move failed",
+        description: error instanceof Error ? error.message : "There was an error moving the folder.",
+        variant: "destructive"
+      });
+    }
+  });
 
   return {
     files,
@@ -172,10 +245,12 @@ export function useFiles(parentFolderId: string | null = null) {
     error: filesError || foldersError,
     uploadFile: uploadFileMutation.mutateAsync,
     createFolder: createFolderMutation.mutateAsync,
-    deleteFile: fileService.deleteFile,
-    deleteFolder: fileService.deleteFolder,
-    renameFile: fileService.renameFile,
-    renameFolder: fileService.renameFolder,
+    deleteFile: deleteFileMutation.mutateAsync,
+    deleteFolder: deleteFolderMutation.mutateAsync,
+    renameFile: renameFileMutation.mutateAsync,
+    renameFolder: renameFolderMutation.mutateAsync,
+    moveFile: moveFileMutation.mutateAsync,
+    moveFolder: moveFolderMutation.mutateAsync,
     getFileUrl: fileService.getFileUrl,
   };
 }

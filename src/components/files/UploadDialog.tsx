@@ -15,10 +15,10 @@ import { formatFileSize } from "@/lib/utils";
 export interface UploadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onUploadComplete: () => void;
+  onUploadComplete: (file: File) => void;
   maxFileSize?: number; // in bytes
   allowedFileTypes?: string[];
-  currentFolderId?: string;
+  currentFolderId: string | null;
 }
 
 interface FileUpload {
@@ -104,57 +104,75 @@ export function UploadDialog({
     // Filter out files with errors
     const validFiles = files.filter(f => f.status !== "error");
     
-    // Simulate upload process for each file
-    for (const fileUpload of validFiles) {
-      if (fileUpload.status === "error") continue;
-      
-      // Update status to uploading
-      setFiles(prev => 
-        prev.map(f => 
-          f.id === fileUpload.id 
-            ? { ...f, status: "uploading" } 
-            : f
-        )
-      );
-      
-      // Simulate progress updates
-      for (let progress = 0; progress <= 100; progress += 5) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+    try {
+      // Process each file
+      for (const fileUpload of validFiles) {
+        if (fileUpload.status === "error") continue;
         
+        // Update status to uploading
         setFiles(prev => 
           prev.map(f => 
             f.id === fileUpload.id 
-              ? { ...f, progress } 
+              ? { ...f, status: "uploading" } 
               : f
           )
         );
+        
+        try {
+          // Set initial progress
+          setFiles(prev => 
+            prev.map(f => 
+              f.id === fileUpload.id 
+                ? { ...f, progress: 10 } 
+                : f
+            )
+          );
+          
+          // Actual file upload
+          await onUploadComplete(fileUpload.file);
+          
+          // Mark as complete
+          setFiles(prev => 
+            prev.map(f => 
+              f.id === fileUpload.id 
+                ? { ...f, progress: 100, status: "complete" } 
+                : f
+            )
+          );
+        } catch (error) {
+          console.error('Error uploading file:', error);
+          // Mark as error
+          setFiles(prev => 
+            prev.map(f => 
+              f.id === fileUpload.id 
+                ? { 
+                    ...f, 
+                    status: "error", 
+                    error: error instanceof Error ? error.message : "Upload failed" 
+                  } 
+                : f
+            )
+          );
+        }
       }
       
-      // Mark as complete
-      setFiles(prev => 
-        prev.map(f => 
-          f.id === fileUpload.id 
-            ? { ...f, status: "complete" } 
-            : f
-        )
+      // Check if all files were uploaded successfully
+      const allComplete = validFiles.every(file => 
+        files.find(f => f.id === file.id)?.status === "complete"
       );
       
-      // Small delay between files
-      await new Promise(resolve => setTimeout(resolve, 300));
+      if (allComplete) {
+        // Close dialog after a short delay
+        setTimeout(() => {
+          onOpenChange(false);
+          // Reset files after dialog closes
+          setTimeout(() => setFiles([]), 300);
+        }, 1000);
+      }
+    } finally {
+      // Always set uploading to false when done
+      setIsUploading(false);
     }
-    
-    // All files uploaded
-    setIsUploading(false);
-    
-    // Notify parent component
-    onUploadComplete();
-    
-    // Close dialog after a short delay
-    setTimeout(() => {
-      onOpenChange(false);
-      // Reset files after dialog closes
-      setTimeout(() => setFiles([]), 300);
-    }, 1000);
   };
 
   const getStatusIcon = (status: FileUpload["status"]) => {
@@ -163,6 +181,10 @@ export function UploadDialog({
         return <AlertCircle className="h-4 w-4 text-destructive" />;
       case "complete":
         return <CheckCircle2 className="h-4 w-4 text-green-500" />;
+      case "uploading":
+        return (
+          <div className="h-4 w-4 rounded-full border-2 border-t-transparent border-creatively-purple animate-spin" />
+        );
       default:
         return null;
     }

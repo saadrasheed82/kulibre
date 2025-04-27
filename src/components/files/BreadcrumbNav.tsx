@@ -15,7 +15,7 @@ export interface FolderPath {
 
 export interface BreadcrumbNavProps {
   folderPath: FolderPath[];
-  onNavigate: (folderId: string) => void;
+  onNavigate: (folderId: string, index: number) => void;
 }
 
 export function BreadcrumbNav({
@@ -26,7 +26,7 @@ export function BreadcrumbNav({
     <Breadcrumb>
       <BreadcrumbList>
         <BreadcrumbItem>
-          <BreadcrumbLink onClick={() => onNavigate("root")} className="flex items-center">
+          <BreadcrumbLink onClick={() => onNavigate("root", 0)} className="flex items-center">
             <Home className="h-4 w-4 mr-1" />
             My Files
           </BreadcrumbLink>
@@ -41,7 +41,7 @@ export function BreadcrumbNav({
             {index === folderPath.length - 1 ? (
               <BreadcrumbPage>{folder.name}</BreadcrumbPage>
             ) : (
-              <BreadcrumbLink onClick={() => onNavigate(folder.id)}>
+              <BreadcrumbLink onClick={() => onNavigate(folder.id, index + 1)}>
                 {folder.name}
               </BreadcrumbLink>
             )}

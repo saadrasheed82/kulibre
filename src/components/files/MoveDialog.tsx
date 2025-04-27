@@ -27,11 +27,11 @@ export interface FolderOption {
 export interface MoveDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onMove: (id: string, destinationFolderId: string) => void;
+  onMove: (id: string, destinationFolderId: string | null) => void;
   itemId: string;
   itemName: string;
   itemType: "file" | "folder";
-  currentFolderId?: string;
+  currentFolderId: string | null;
   folders: FolderOption[];
 }
 
@@ -84,12 +84,11 @@ export function MoveDialog({
     
     setIsSubmitting(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      onMove(itemId, destinationFolderId);
-      setIsSubmitting(false);
-      onOpenChange(false);
-    }, 500);
+    // Handle root folder case
+    const targetFolderId = destinationFolderId === "root" ? null : destinationFolderId;
+    
+    onMove(itemId, targetFolderId);
+    setIsSubmitting(false);
   };
 
   return (

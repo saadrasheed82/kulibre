@@ -50,6 +50,8 @@ export default function Files() {
     deleteFolder,
     renameFile,
     renameFolder,
+    moveFile,
+    moveFolder,
     getFileUrl
   } = useFiles(currentFolderId);
 
@@ -65,19 +67,21 @@ export default function Files() {
   // Handle file and folder operations
   const handleUploadComplete = async (file: File) => {
     try {
-      await uploadFile({ file, parentFolderId: currentFolderId || '' });
-      setUploadDialogOpen(false);
+      // The actual upload is handled in the UploadDialog component
+      // This function is called for each file
+      return await uploadFile({ file, parentFolderId: currentFolderId });
     } catch (error) {
       console.error('Upload error:', error);
+      throw error; // Re-throw to let the UploadDialog component handle it
     }
   };
 
   const handleCreateFolder = async (name: string) => {
     try {
-      await createFolder({ name, parentFolderId: currentFolderId || '' });
-      setCreateFolderDialogOpen(false);
+      return await createFolder({ name, parentFolderId: currentFolderId });
     } catch (error) {
       console.error('Create folder error:', error);
+      throw error; // Re-throw to let the CreateFolderDialog component handle it
     }
   };
 
@@ -105,6 +109,22 @@ export default function Files() {
     setRenameDialogOpen(false);
   };
 
+  const handleMove = async (id: string, destinationFolderId: string | null) => {
+    if (!itemToMove) return;
+
+    try {
+      if (itemToMove.type === 'file') {
+        await moveFile({ fileId: id, newFolderId: destinationFolderId });
+      } else {
+        await moveFolder({ folderId: id, newParentFolderId: destinationFolderId });
+      }
+      setItemToMove(null);
+      setMoveDialogOpen(false);
+    } catch (error) {
+      console.error('Move error:', error);
+    }
+  };
+
   // Navigate to a folder
   const navigateToFolder = (folderId: string, folderName: string) => {
     setCurrentFolderId(folderId);
@@ -112,7 +132,14 @@ export default function Files() {
   };
 
   // Navigate using breadcrumbs
-  const navigateToBreadcrumb = (index: number) => {
+  const navigateToBreadcrumb = (folderId: string, index: number) => {
+    // Handle "root" or "home" navigation
+    if (folderId === "root" || index === 0) {
+      setCurrentFolderId(null);
+      setBreadcrumbs([{ id: null, name: "Home" }]);
+      return;
+    }
+    
     const targetCrumb = breadcrumbs[index];
     setCurrentFolderId(targetCrumb.id);
     setBreadcrumbs(prev => prev.slice(0, index + 1));
@@ -127,7 +154,7 @@ export default function Files() {
 
       <BreadcrumbNav 
         folderPath={breadcrumbs.slice(1)}
-        onNavigate={(_, index) => navigateToBreadcrumb(index)}
+        onNavigate={(folderId, index) => navigateToBreadcrumb(folderId, index)}
       />
 
       <div className="flex flex-col sm:flex-row gap-3">
@@ -148,7 +175,12 @@ export default function Files() {
       </div>
 
       {isLoading ? (
-        <div>Loading...</div>
+        <div className="flex items-center justify-center h-64">
+          <div className="flex flex-col items-center gap-2">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-creatively-purple"></div>
+            <p className="text-muted-foreground">Loading files and folders...</p>
+          </div>
+        </div>
       ) : filteredFolders.length === 0 && filteredFiles.length === 0 ? (
         <EmptyState
           onUpload={() => setUploadDialogOpen(true)}
@@ -265,7 +297,11 @@ export default function Files() {
           itemName={itemToMove.name}
           itemType={itemToMove.type}
           currentFolderId={currentFolderId}
-          folders={folders}
+          folders={folders.map(folder => ({
+            id: folder.id,
+            name: folder.name,
+            parentId: folder.parent_folder_id || undefined
+          }))}
         />
       )}
     </div>

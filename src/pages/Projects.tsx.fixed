@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -469,6 +470,7 @@ export default function Projects() {
   };
 
   return (
+    <Layout>
       <div className="space-y-8">
         <div className="flex justify-between items-center">
           <div>
@@ -1034,5 +1036,6 @@ export default function Projects() {
           </div>
         )}
       </div>
+    </Layout>
   );
 }

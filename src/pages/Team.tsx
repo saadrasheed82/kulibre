@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from "react";
+import { v4 as uuidv4 } from 'uuid';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,6 +53,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { TeamMemberDetails } from "@/components/dashboard/TeamMemberDetails";
 import { TeamBulkActions } from "@/components/dashboard/TeamBulkActions";
+import { safelyInsertProjectMembers } from "@/utils/supabase-helpers";
 import { 
   UserPlus, 
   Search, 
@@ -71,7 +73,7 @@ type TeamMember = {
   id: string;
   full_name: string | null;
   avatar_url: string | null;
-  email?: string;
+  email: string;
   role: "admin" | "team_member" | "client";
   status: "active" | "invited" | "inactive";
   company: string | null;
@@ -91,6 +93,7 @@ export default function Team() {
   const [filterRole, setFilterRole] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [addMemberDialogOpen, setAddMemberDialogOpen] = useState(false);
   const [editMemberOpen, setEditMemberOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
@@ -100,26 +103,56 @@ export default function Team() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"admin" | "team_member" | "client">("team_member");
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
+  
+  // Form states for manual add
+  const [newMemberName, setNewMemberName] = useState("");
+  const [newMemberEmail, setNewMemberEmail] = useState("");
+  const [newMemberRole, setNewMemberRole] = useState<"admin" | "team_member" | "client">("team_member");
+  const [newMemberProjects, setNewMemberProjects] = useState<string[]>([]);
 
   // Fetch team members
   const { data: teamMembers, isLoading } = useQuery({
     queryKey: ['team-members'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First, get all profiles from Supabase
+      const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
         .order('full_name');
       
-      if (error) {
-        throw new Error(error.message);
+      if (profilesError) {
+        throw new Error(profilesError.message);
       }
       
-      // Transform data to include status (in a real app, this would come from the database)
-      return (data || []).map(member => ({
-        ...member,
-        email: `${member.full_name?.toLowerCase().replace(/\s+/g, '.')}@example.com`, // Mock email
-        status: Math.random() > 0.7 ? (Math.random() > 0.5 ? "invited" : "inactive") : "active" // Random status for demo
-      })) as TeamMember[];
+      // Get invitations from localStorage
+      const invitations = JSON.parse(localStorage.getItem('team_invitations') || '[]');
+      
+      // Get manually added team members from localStorage
+      const manuallyAddedMembers = JSON.parse(localStorage.getItem('team_members') || '[]');
+      
+      // Transform Supabase profiles to include email and status
+      const supabaseMembers = (profiles || []).map(member => {
+        // Check if there's a pending invitation for this user
+        const invitation = invitations.find((inv: any) => inv.user_id === member.id);
+        
+        // Generate email from name if it's not available
+        let email = `${member.full_name?.toLowerCase().replace(/\s+/g, '.')}@example.com`;
+        
+        // If this is an invited user, get the email from the invitation
+        if (invitation) {
+          email = invitation.email;
+        }
+        
+        return {
+          ...member,
+          email,
+          status: invitation ? "invited" : 
+                  member.full_name?.includes("(Invited)") ? "invited" : "active"
+        } as TeamMember;
+      });
+      
+      // Combine Supabase profiles with manually added team members
+      return [...supabaseMembers, ...manuallyAddedMembers];
     }
   });
 
@@ -155,10 +188,62 @@ export default function Team() {
   // Invite member mutation
   const inviteMemberMutation = useMutation({
     mutationFn: async (newMember: { email: string; role: string; projects?: string[] }) => {
-      // In a real app, this would call an API to send an invite
-      // For demo purposes, we'll just simulate a delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return { success: true, id: `user-${Date.now()}` };
+      // Generate a placeholder name from the email
+      const emailName = newMember.email.split('@')[0];
+      const placeholderName = emailName.replace(/[.]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      
+      // Generate a UUID for the new user
+      const userId = uuidv4();
+      
+      // First, create a new profile for the invited user
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: userId, // Required field
+          full_name: `${placeholderName} (Invited)`, // Create a name from email
+          role: newMember.role as "admin" | "team_member" | "client",
+          created_at: new Date().toISOString()
+          // Note: We're not setting email since the column doesn't exist yet
+        })
+        .select()
+        .single();
+      
+      if (profileError) {
+        throw new Error(`Failed to create profile: ${profileError.message}`);
+      }
+      
+      // Store the invitation details in localStorage as a workaround
+      // In a real app, this would be stored in a database table
+      const invitations = JSON.parse(localStorage.getItem('team_invitations') || '[]');
+      invitations.push({
+        id: `inv-${Date.now()}`,
+        email: newMember.email,
+        role: newMember.role,
+        user_id: profile.id,
+        created_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // Expires in 7 days
+      });
+      localStorage.setItem('team_invitations', JSON.stringify(invitations));
+      
+      // If projects are selected, assign the user to those projects
+      if (newMember.projects && newMember.projects.length > 0) {
+        // For each project, safely add the user as a member
+        for (const projectId of newMember.projects) {
+          const result = await safelyInsertProjectMembers(projectId, [profile.id]);
+          
+          if (!result.success && result.error) {
+            console.warn(`Note: User was created but there was an issue adding to project ${projectId}:`, result.error);
+            // Only throw if it's not the recursion error
+            if (!result.error.includes("policy issue")) {
+              throw new Error(`Failed to assign projects: ${result.error}`);
+            }
+          }
+        }
+      }
+      
+      // In a real app, you would also send an email invitation here
+      
+      return { success: true, id: profile.id };
     },
     onSuccess: () => {
       toast({
@@ -169,8 +254,8 @@ export default function Team() {
       setInviteEmail("");
       setInviteRole("team_member");
       setSelectedProjects([]);
-      // In a real app, you would refetch the team members
-      // queryClient.invalidateQueries({ queryKey: ['team-members'] });
+      // Refetch the team members to update the list
+      queryClient.invalidateQueries({ queryKey: ['team-members'] });
     },
     onError: (error) => {
       toast({
@@ -184,8 +269,47 @@ export default function Team() {
   // Update member mutation
   const updateMemberMutation = useMutation({
     mutationFn: async (updatedMember: Partial<TeamMember>) => {
-      // In a real app, this would update the member in the database
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Update the profile in the database
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: updatedMember.full_name,
+          role: updatedMember.role,
+          company: updatedMember.company,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', updatedMember.id);
+      
+      if (error) {
+        throw new Error(`Failed to update member: ${error.message}`);
+      }
+      
+      // If status is being updated, handle it separately
+      if (updatedMember.status) {
+        if (updatedMember.status === 'inactive') {
+          // Deactivate the user (in a real app, this might involve disabling their account)
+          // For now, we'll just update a status field if it exists
+          const { error: statusError } = await supabase
+            .from('profiles')
+            .update({ active: false })
+            .eq('id', updatedMember.id);
+          
+          if (statusError && statusError.code !== 'PGRST205') { // Ignore if column doesn't exist
+            throw new Error(`Failed to update status: ${statusError.message}`);
+          }
+        } else if (updatedMember.status === 'active') {
+          // Activate the user
+          const { error: statusError } = await supabase
+            .from('profiles')
+            .update({ active: true })
+            .eq('id', updatedMember.id);
+          
+          if (statusError && statusError.code !== 'PGRST205') { // Ignore if column doesn't exist
+            throw new Error(`Failed to update status: ${statusError.message}`);
+          }
+        }
+      }
+      
       return { success: true };
     },
     onSuccess: () => {
@@ -195,8 +319,8 @@ export default function Team() {
       });
       setEditMemberOpen(false);
       setSelectedMember(null);
-      // In a real app, you would refetch the team members
-      // queryClient.invalidateQueries({ queryKey: ['team-members'] });
+      // Refetch the team members to update the list
+      queryClient.invalidateQueries({ queryKey: ['team-members'] });
     },
     onError: (error) => {
       toast({
@@ -207,11 +331,117 @@ export default function Team() {
     }
   });
 
+  // Add member manually mutation
+  const addMemberMutation = useMutation({
+    mutationFn: async (newMember: { name: string; email: string; role: string; projects?: string[] }) => {
+      // Generate a UUID for the new user
+      const userId = uuidv4();
+      
+      // Instead of creating a profile in Supabase, we'll store the team member in localStorage
+      const teamMembers = JSON.parse(localStorage.getItem('team_members') || '[]');
+      
+      // Create a new team member object
+      const newTeamMember = {
+        id: userId,
+        full_name: newMember.name,
+        email: newMember.email,
+        role: newMember.role as "admin" | "team_member" | "client",
+        status: "active",
+        company: null,
+        avatar_url: null,
+        created_at: new Date().toISOString()
+      };
+      
+      // Add the new team member to the array
+      teamMembers.push(newTeamMember);
+      
+      // Save the updated array back to localStorage
+      localStorage.setItem('team_members', JSON.stringify(teamMembers));
+      
+      // If projects are selected, store project assignments in localStorage
+      if (newMember.projects && newMember.projects.length > 0) {
+        const projectAssignments = JSON.parse(localStorage.getItem('team_member_projects') || '[]');
+        
+        newMember.projects.forEach(projectId => {
+          projectAssignments.push({
+            project_id: projectId,
+            user_id: userId,
+            assigned_at: new Date().toISOString()
+          });
+        });
+        
+        localStorage.setItem('team_member_projects', JSON.stringify(projectAssignments));
+      }
+      
+      return { success: true, id: userId };
+    },
+    onSuccess: () => {
+      toast({
+        title: "Team member added",
+        description: `${newMemberName} has been added to the team`,
+      });
+      setAddMemberDialogOpen(false);
+      setNewMemberName("");
+      setNewMemberEmail("");
+      setNewMemberRole("team_member");
+      setNewMemberProjects([]);
+      // Refetch the team members to update the list
+      queryClient.invalidateQueries({ queryKey: ['team-members'] });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to add team member: ${error}`,
+        variant: "destructive",
+      });
+    }
+  });
+
   // Remove member mutation
   const removeMemberMutation = useMutation({
     mutationFn: async (memberId: string) => {
-      // In a real app, this would remove the member from the database
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Check if this is a manually added team member
+      const teamMembers = JSON.parse(localStorage.getItem('team_members') || '[]');
+      const isManuallyAdded = teamMembers.some((member: any) => member.id === memberId);
+      
+      if (isManuallyAdded) {
+        // Remove the team member from localStorage
+        const updatedTeamMembers = teamMembers.filter((member: any) => member.id !== memberId);
+        localStorage.setItem('team_members', JSON.stringify(updatedTeamMembers));
+        
+        // Remove any project assignments from localStorage
+        const projectAssignments = JSON.parse(localStorage.getItem('team_member_projects') || '[]');
+        const updatedProjectAssignments = projectAssignments.filter((assignment: any) => assignment.user_id !== memberId);
+        localStorage.setItem('team_member_projects', JSON.stringify(updatedProjectAssignments));
+      } else {
+        // This is a Supabase profile, so handle it normally
+        
+        // First, remove any project assignments
+        const { error: projectAssignmentError } = await supabase
+          .from('project_members')
+          .delete()
+          .eq('user_id', memberId);
+        
+        if (projectAssignmentError) {
+          throw new Error(`Failed to remove project assignments: ${projectAssignmentError.message}`);
+        }
+        
+        // Remove any pending invitations from localStorage
+        const invitations = JSON.parse(localStorage.getItem('team_invitations') || '[]');
+        const updatedInvitations = invitations.filter((inv: any) => inv.user_id !== memberId);
+        localStorage.setItem('team_invitations', JSON.stringify(updatedInvitations));
+        
+        // Finally, remove the profile
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .delete()
+          .eq('id', memberId);
+        
+        if (profileError) {
+          throw new Error(`Failed to remove profile: ${profileError.message}`);
+        }
+      }
+      
       return { success: true };
     },
     onSuccess: () => {
@@ -219,8 +449,8 @@ export default function Team() {
         title: "Member removed",
         description: "The team member has been removed successfully.",
       });
-      // In a real app, you would refetch the team members
-      // queryClient.invalidateQueries({ queryKey: ['team-members'] });
+      // Refetch the team members to update the list
+      queryClient.invalidateQueries({ queryKey: ['team-members'] });
     },
     onError: (error) => {
       toast({
@@ -248,6 +478,34 @@ export default function Team() {
       projects: selectedProjects.length > 0 ? selectedProjects : undefined
     });
   };
+  
+  // Handle add member submission
+  const handleAddMember = () => {
+    if (!newMemberName) {
+      toast({
+        title: "Error",
+        description: "Name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!newMemberEmail) {
+      toast({
+        title: "Error",
+        description: "Email is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    addMemberMutation.mutate({
+      name: newMemberName,
+      email: newMemberEmail,
+      role: newMemberRole,
+      projects: newMemberProjects.length > 0 ? newMemberProjects : undefined
+    });
+  };
 
   // Handle member update
   const handleUpdateMember = () => {
@@ -269,23 +527,105 @@ export default function Team() {
   };
   
   // Handle bulk role change
-  const handleBulkRoleChange = (role: string) => {
-    // In a real app, this would update all selected members in the database
-    toast({
-      title: "Roles updated",
-      description: `Updated ${selectedMembers.length} team members to ${role}`,
-    });
-    setSelectedMembers([]);
+  const handleBulkRoleChange = async (role: string) => {
+    try {
+      // Update all selected members' roles in the database
+      const updates = selectedMembers.map(member => ({
+        id: member.id,
+        role: role as "admin" | "team_member" | "client"
+      }));
+      
+      for (const update of updates) {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ role: update.role, updated_at: new Date().toISOString() })
+          .eq('id', update.id);
+        
+        if (error) {
+          throw new Error(`Failed to update role for member ${update.id}: ${error.message}`);
+        }
+      }
+      
+      toast({
+        title: "Roles updated",
+        description: `Updated ${selectedMembers.length} team members to ${role}`,
+      });
+      setSelectedMembers([]);
+      // Refetch the team members to update the list
+      queryClient.invalidateQueries({ queryKey: ['team-members'] });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to update roles: ${error}`,
+        variant: "destructive",
+      });
+    }
   };
   
   // Handle bulk delete
-  const handleBulkDelete = () => {
-    // In a real app, this would delete all selected members from the database
-    toast({
-      title: "Team members removed",
-      description: `Removed ${selectedMembers.length} team members`,
-    });
-    setSelectedMembers([]);
+  const handleBulkDelete = async () => {
+    try {
+      // Get manually added team members from localStorage
+      const teamMembers = JSON.parse(localStorage.getItem('team_members') || '[]');
+      
+      // Delete all selected members
+      for (const member of selectedMembers) {
+        // Check if this is a manually added team member
+        const isManuallyAdded = teamMembers.some((m: any) => m.id === member.id);
+        
+        if (isManuallyAdded) {
+          // Remove the team member from localStorage
+          const updatedTeamMembers = teamMembers.filter((m: any) => m.id !== member.id);
+          localStorage.setItem('team_members', JSON.stringify(updatedTeamMembers));
+          
+          // Remove any project assignments from localStorage
+          const projectAssignments = JSON.parse(localStorage.getItem('team_member_projects') || '[]');
+          const updatedProjectAssignments = projectAssignments.filter((assignment: any) => assignment.user_id !== member.id);
+          localStorage.setItem('team_member_projects', JSON.stringify(updatedProjectAssignments));
+        } else {
+          // This is a Supabase profile, so handle it normally
+          
+          // First, remove any project assignments
+          const { error: projectAssignmentError } = await supabase
+            .from('project_members')
+            .delete()
+            .eq('user_id', member.id);
+          
+          if (projectAssignmentError) {
+            throw new Error(`Failed to remove project assignments: ${projectAssignmentError.message}`);
+          }
+          
+          // Remove any pending invitations from localStorage
+          const invitations = JSON.parse(localStorage.getItem('team_invitations') || '[]');
+          const updatedInvitations = invitations.filter((inv: any) => inv.user_id !== member.id);
+          localStorage.setItem('team_invitations', JSON.stringify(updatedInvitations));
+          
+          // Finally, remove the profile
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .delete()
+            .eq('id', member.id);
+          
+          if (profileError) {
+            throw new Error(`Failed to remove profile: ${profileError.message}`);
+          }
+        }
+      }
+      
+      toast({
+        title: "Team members removed",
+        description: `Removed ${selectedMembers.length} team members`,
+      });
+      setSelectedMembers([]);
+      // Refetch the team members to update the list
+      queryClient.invalidateQueries({ queryKey: ['team-members'] });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: `Failed to remove team members: ${error}`,
+        variant: "destructive",
+      });
+    }
   };
   
   // Toggle member selection for bulk actions
@@ -332,13 +672,96 @@ export default function Team() {
           <h1 className="text-3xl font-bold">Team</h1>
           <p className="text-muted-foreground mt-1">Manage your team members and their access</p>
         </div>
-        <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2">
-              <UserPlus className="h-4 w-4" />
-              Invite Member
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Dialog open={addMemberDialogOpen} onOpenChange={setAddMemberDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <UserPlus className="h-4 w-4" />
+                Add Member
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add Team Member</DialogTitle>
+                <DialogDescription>
+                  Add a new team member directly to your team.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name</Label>
+                  <Input
+                    id="name"
+                    type="text"
+                    placeholder="John Doe"
+                    value={newMemberName}
+                    onChange={(e) => setNewMemberName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="new-email">Email address</Label>
+                  <Input
+                    id="new-email"
+                    type="email"
+                    placeholder="john.doe@example.com"
+                    value={newMemberEmail}
+                    onChange={(e) => setNewMemberEmail(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="new-role">Role</Label>
+                  <Select value={newMemberRole} onValueChange={(value: any) => setNewMemberRole(value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="team_member">Team Member</SelectItem>
+                      <SelectItem value="client">Client</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Assign to Projects (Optional)</Label>
+                  <div className="border rounded-md p-4 max-h-40 overflow-y-auto space-y-2">
+                    {projects?.map(project => (
+                      <div key={project.id} className="flex items-center space-x-2">
+                        <Checkbox 
+                          id={`new-project-${project.id}`}
+                          checked={newMemberProjects.includes(project.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setNewMemberProjects([...newMemberProjects, project.id]);
+                            } else {
+                              setNewMemberProjects(newMemberProjects.filter(id => id !== project.id));
+                            }
+                          }}
+                        />
+                        <Label htmlFor={`new-project-${project.id}`}>{project.name}</Label>
+                      </div>
+                    ))}
+                    {!projects?.length && (
+                      <p className="text-sm text-muted-foreground">No projects available</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setAddMemberDialogOpen(false)}>Cancel</Button>
+                <Button onClick={handleAddMember} disabled={addMemberMutation.isPending}>
+                  {addMemberMutation.isPending ? "Adding..." : "Add Member"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          
+          <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="gap-2">
+                <Mail className="h-4 w-4" />
+                Invite Member
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Invite Team Member</DialogTitle>
@@ -403,6 +826,7 @@ export default function Team() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
