@@ -8,7 +8,12 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "setup-db": "node --experimental-modules setup-database.js",
+    "create-demo-data": "node --experimental-modules create-demo-projects.js",
+    "create-milestones": "node --experimental-modules create-project-milestones.js",
+    "setup-demo": "node --experimental-modules setup-demo-data.js",
+    "check-db": "node --experimental-modules check-database-connection.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",

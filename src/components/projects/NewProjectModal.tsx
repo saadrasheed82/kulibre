@@ -1,11 +1,5 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { format } from "date-fns";
-import { CalendarIcon, ChevronDown, ChevronUp, Plus, X } from "lucide-react";
-
+import { useState } from "react";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,17 +8,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -33,714 +20,246 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
-import { FileUploader } from "@/components/files/FileUploader";
-import { safelyInsertProjectMembers } from "@/utils/supabase-helpers";
-
-// Define the form schema with Zod
-const formSchema = z.object({
-  name: z.string().min(2, "Project name must be at least 2 characters"),
-  client_id: z.string().optional(),
-  type: z.enum([
-    "logo",
-    "brand_identity",
-    "web_design",
-    "campaign",
-    "video",
-    "photography",
-    "other",
-  ]),
-  start_date: z.date().optional(),
-  due_date: z.date().optional(),
-  description: z.string().optional(),
-  team_members: z.array(z.string()).optional(),
-  budget: z.number().positive().optional(),
-  milestones: z
-    .array(
-      z.object({
-        name: z.string(),
-        date: z.date(),
-      })
-    )
-    .optional(),
-});
-
-type FormValues = z.infer<typeof formSchema>;
-
-interface Client {
-  id: string;
-  name: string;
-}
-
-interface TeamMember {
-  id: string;
-  full_name: string;
-  avatar_url?: string;
-}
 
 interface NewProjectModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  trigger?: React.ReactNode;
+  onProjectCreated?: () => void;
 }
 
-export function NewProjectModal({ open, onOpenChange }: NewProjectModalProps) {
-  const navigate = useNavigate();
+export function NewProjectModal({ trigger, onProjectCreated }: NewProjectModalProps) {
   const { toast } = useToast();
-  const [clients, setClients] = useState<Client[]>([]);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
-  const [milestones, setMilestones] = useState<{ name: string; date: Date }[]>([]);
-  const [newMilestone, setNewMilestone] = useState<{ name: string; date: Date | undefined }>({
+  const [open, setOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
     name: "",
-    date: undefined,
+    description: "",
+    type: "website" as const,
+    status: "draft" as const,
+    start_date: "",
+    due_date: "",
   });
 
-  // Initialize the form
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      type: "other",
-      description: "",
-      team_members: [],
-      milestones: [],
-    },
-  });
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
-  // Fetch clients and team members when the modal opens
-  React.useEffect(() => {
-    if (open) {
-      // Set a loading state while fetching data
-      setIsLoading(true);
-      
-      // Use Promise.allSettled to handle both requests independently
-      Promise.allSettled([
-        fetchClients(),
-        fetchTeamMembers()
-      ]).finally(() => {
-        setIsLoading(false);
+  const handleSelectChange = (name: string, value: any) => {
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.name.trim()) {
+      toast({
+        title: "Error",
+        description: "Project name is required",
+        variant: "destructive",
       });
+      return;
     }
-  }, [open]);
 
-  const fetchClients = async () => {
+    setIsSubmitting(true);
+    
     try {
-      const { data, error } = await supabase
-        .from("clients")
-        .select("id, name")
-        .order("name");
-
-      if (error) throw error;
-      setClients(data || []);
-      return data;
-    } catch (error) {
-      console.error("Error fetching clients:", error);
-      // Don't show toast for this error to avoid UI disruption
-      // Just set empty array to allow the form to work
-      setClients([]);
-      return [];
-    }
-  };
-
-  const fetchTeamMembers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, full_name, avatar_url")
-        .eq("role", "team_member")
-        .order("full_name");
-
-      if (error) throw error;
-      setTeamMembers(data || []);
-      return data;
-    } catch (error) {
-      console.error("Error fetching team members:", error);
-      // Don't show toast for this error to avoid UI disruption
-      // Just set empty array to allow the form to work
-      setTeamMembers([]);
-      return [];
-    }
-  };
-
-  const addMilestone = () => {
-    if (newMilestone.name && newMilestone.date) {
-      setMilestones([...milestones, { ...newMilestone }]);
-      setNewMilestone({ name: "", date: undefined });
-    }
-  };
-
-  const removeMilestone = (index: number) => {
-    setMilestones(milestones.filter((_, i) => i !== index));
-  };
-
-  const onSubmit = async (values: FormValues) => {
-    setIsLoading(true);
-
-    try {
-      // Get the current user with better error handling
-      const { data, error: userError } = await supabase.auth.getUser();
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
       
-      if (userError) {
-        console.error("Authentication error:", userError);
-        throw new Error(`Authentication error: ${userError.message}`);
-      }
-      
-      if (!data.user) {
-        console.error("No user found - redirecting to login");
-        toast({
-          title: "Authentication Required",
-          description: "Please log in to create a project",
-          variant: "destructive",
-        });
-        // Close the modal
-        onOpenChange(false);
-        // Redirect to login page
-        window.location.href = '/login';
-        return;
+      if (!user) {
+        throw new Error("You must be logged in to create a project");
       }
 
-      const user = data.user;
+      console.log("Creating new project with data:", {
+        name: formData.name,
+        description: formData.description,
+        type: formData.type,
+        status: formData.status,
+        start_date: formData.start_date || null,
+        due_date: formData.due_date || null,
+        created_by: user.id
+      });
       
-      // Add milestones to the form values
-      values.milestones = milestones;
-
-      // Create the project with proper error handling
-      console.log("Creating project with user ID:", user.id);
-      
-      const projectData = {
-        name: values.name,
-        client_id: values.client_id || null,
-        type: values.type,
-        start_date: values.start_date ? format(values.start_date, "yyyy-MM-dd") : null,
-        due_date: values.due_date ? format(values.due_date, "yyyy-MM-dd") : null,
-        description: values.description || null,
-        created_by: user.id,
-        status: "draft" as Database["public"]["Enums"]["project_status"],
-      };
-      
-      console.log("Project data to insert:", projectData);
-      
-      const { data: project, error } = await supabase
+      // Insert project
+      const { data, error } = await supabase
         .from("projects")
-        .insert(projectData)
-        .select()
-        .single();
+        .insert([{
+          name: formData.name,
+          description: formData.description,
+          type: formData.type,
+          status: formData.status,
+          start_date: formData.start_date || null,
+          due_date: formData.due_date || null,
+          created_by: user.id,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }])
+        .select();
 
-      if (error) {
-        console.error("Error creating project:", error);
-        throw new Error(`Failed to create project: ${error.message}`);
-      }
-      
-      if (!project) {
-        console.error("No project data returned after insert");
-        throw new Error("Project was created but no data was returned");
-      }
-      
-      console.log("Project created successfully:", project);
+      if (error) throw error;
 
-      // If team members were selected, assign them to the project
-      if (values.team_members && values.team_members.length > 0) {
-        // Use our utility function to safely add team members
-        const result = await safelyInsertProjectMembers(project.id, values.team_members);
-        
-        if (!result.success && result.error) {
-          console.warn("Note: Project was created but there was an issue adding team members:", result.error);
-          // Only throw if it's not the recursion error
-          if (!result.error.includes("policy issue")) {
-            throw new Error(`Failed to add team members: ${result.error}`);
-          }
+      // Add current user as project member
+      if (data && data[0]) {
+        const { error: memberError } = await supabase
+          .from("project_members")
+          .insert({
+            project_id: data[0].id,
+            user_id: user.id,
+            role: "owner",
+            assigned_at: new Date().toISOString(),
+          });
+
+        if (memberError) {
+          console.error("Error adding user as project member:", memberError);
         }
       }
 
-      // If milestones were added, create them
-      if (milestones.length > 0) {
-        const projectMilestones = milestones.map((milestone) => ({
-          project_id: project.id,
-          name: milestone.name,
-          due_date: format(milestone.date, "yyyy-MM-dd"),
-        }));
-
-        const { error: milestoneError } = await supabase
-          .from("project_milestones")
-          .insert(projectMilestones);
-
-        if (milestoneError) throw milestoneError;
-      }
-
-      // If files were uploaded, associate them with the project
-      if (uploadedFiles.length > 0) {
-        // Assuming you have a way to associate files with projects
-        // This would depend on your file storage implementation
-      }
-
-      // Show success message
       toast({
-        title: "Success",
-        description: `Project '${values.name}' created successfully!`,
+        title: "Project created",
+        description: "Your new project has been created successfully.",
       });
 
-      // Just close the modal - the parent component will handle refreshing the list
-      onOpenChange(false);
+      // Reset form and close modal
+      setFormData({
+        name: "",
+        description: "",
+        type: "website",
+        status: "draft",
+        start_date: "",
+        due_date: "",
+      });
+      setOpen(false);
+
+      // Call callback if provided
+      if (onProjectCreated) {
+        onProjectCreated();
+      }
     } catch (error: any) {
-      console.error("Error creating project:", error);
-      
-      // Check if this is the infinite recursion error
-      if (error?.message && error.message.includes("infinite recursion") && error.message.includes("project_members")) {
-        // This is the specific error we're handling
-        console.log("Detected policy recursion issue - project was likely created");
-        
-        // Show success message instead of error
-        toast({
-          title: "Success",
-          description: `Project '${values.name}' created successfully!`,
-        });
-        
-        // Close the modal
-        onOpenChange(false);
-        return; // Exit early to avoid showing error
-      }
-      
-      // Provide a more detailed error message for other errors
-      let errorMessage = "Failed to create project. ";
-      if (error?.message) {
-        errorMessage += error.message;
-      }
-      
       toast({
-        title: "Error",
-        description: errorMessage,
+        title: "Error creating project",
+        description: error.message,
         variant: "destructive",
       });
-      
-      // Only close the modal for non-authentication errors
-      if (!errorMessage.includes("Authentication")) {
-        onOpenChange(false);
-      }
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  // Add error boundary handling
-  const [hasError, setHasError] = React.useState(false);
-  
-  React.useEffect(() => {
-    // Reset error state when modal opens/closes
-    setHasError(false);
-  }, [open]);
-  
-  // Error handler function
-  const handleError = (error: Error) => {
-    console.error("Error in modal:", error);
-    setHasError(true);
-  };
-  
-  // Wrap the component in an error boundary
-  React.useEffect(() => {
-    window.addEventListener('error', (event) => {
-      if (open) {
-        console.error("Window error event:", event);
-        setHasError(true);
-      }
-    });
-    
-    return () => {
-      window.removeEventListener('error', () => {});
-    };
-  }, [open]);
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Create New Project</DialogTitle>
-          <DialogDescription>
-            Fill in the details to create a new project.
-          </DialogDescription>
-        </DialogHeader>
-
-        {hasError ? (
-          <div className="p-4 border border-red-300 bg-red-50 rounded-md">
-            <h3 className="text-red-800 font-medium">Something went wrong</h3>
-            <p className="text-red-600 mt-1">
-              There was an error loading the project form. Please try again later.
-            </p>
-            <Button 
-              className="mt-4" 
-              variant="outline" 
-              onClick={() => onOpenChange(false)}
-            >
-              Close
-            </Button>
-          </div>
-        ) : (
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Project Name*</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter project name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="client_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Client</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a client" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="">No client</SelectItem>
-                      {clients.map((client) => (
-                        <SelectItem key={client.id} value={client.id}>
-                          {client.name}
-                        </SelectItem>
-                      ))}
-                      <SelectItem value="new" className="text-creatively-purple">
-                        <div className="flex items-center">
-                          <Plus className="mr-2 h-4 w-4" />
-                          Add New Client
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Project Type*</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select project type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="logo">Logo Design</SelectItem>
-                      <SelectItem value="brand_identity">Brand Identity</SelectItem>
-                      <SelectItem value="web_design">Web Design</SelectItem>
-                      <SelectItem value="campaign">Campaign</SelectItem>
-                      <SelectItem value="video">Video</SelectItem>
-                      <SelectItem value="photography">Photography</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="start_date"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Start Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="due_date"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Due Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Project Description</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Enter project description"
-                      className="min-h-[100px]"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="space-y-2">
-              <FormLabel>Upload Brief/Files</FormLabel>
-              <FileUploader
-                onUploadComplete={(files) => setUploadedFiles(files)}
-                maxFiles={5}
-                acceptedFileTypes={[
-                  "image/*",
-                  "application/pdf",
-                  "application/msword",
-                  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                ]}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="team_members"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Assign Team Members</FormLabel>
-                  <div className="space-y-2">
-                    {teamMembers.map((member) => (
-                      <div key={member.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`team-member-${member.id}`}
-                          checked={field.value?.includes(member.id)}
-                          onCheckedChange={(checked) => {
-                            const updatedValue = checked
-                              ? [...(field.value || []), member.id]
-                              : (field.value || []).filter((id) => id !== member.id);
-                            field.onChange(updatedValue);
-                          }}
-                        />
-                        <label
-                          htmlFor={`team-member-${member.id}`}
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                        >
-                          {member.full_name}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="border-t pt-4">
-              <Button
-                type="button"
-                variant="ghost"
-                className="flex items-center w-full justify-between"
-                onClick={() => setShowAdvanced(!showAdvanced)}
-              >
-                <span>Advanced Settings</span>
-                {showAdvanced ? (
-                  <ChevronUp className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
-                )}
-              </Button>
-
-              {showAdvanced && (
-                <div className="space-y-4 mt-4">
-                  <FormField
-                    control={form.control}
-                    name="budget"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Budget Estimate ($)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            placeholder="Enter budget amount"
-                            {...field}
-                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <div className="space-y-2">
-                    <FormLabel>Set Milestones</FormLabel>
-                    <div className="space-y-2">
-                      {milestones.map((milestone, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center justify-between p-2 border rounded-md"
-                        >
-                          <div>
-                            <span className="font-medium">{milestone.name}</span>
-                            <span className="text-sm text-muted-foreground ml-2">
-                              {format(milestone.date, "PPP")}
-                            </span>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeMilestone(index)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="flex space-x-2 mt-2">
-                      <Input
-                        placeholder="Milestone name"
-                        value={newMilestone.name}
-                        onChange={(e) =>
-                          setNewMilestone({
-                            ...newMilestone,
-                            name: e.target.value,
-                          })
-                        }
-                        className="flex-1"
-                      />
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline">
-                            {newMilestone.date ? (
-                              format(newMilestone.date, "PP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-2 h-4 w-4" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <Calendar
-                            mode="single"
-                            selected={newMilestone.date}
-                            onSelect={(date) =>
-                              setNewMilestone({
-                                ...newMilestone,
-                                date,
-                              })
-                            }
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <Button
-                        type="button"
-                        onClick={addMilestone}
-                        disabled={!newMilestone.name || !newMilestone.date}
-                      >
-                        Add
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={isLoading}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading ? "Creating..." : "Create Project"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        {trigger || (
+          <Button className="gap-1">
+            <Plus className="h-4 w-4" />
+            <span>New Project</span>
+          </Button>
         )}
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[600px]">
+        <form onSubmit={handleSubmit}>
+          <DialogHeader>
+            <DialogTitle>Create New Project</DialogTitle>
+            <DialogDescription>
+              Fill in the details below to create a new project.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Project Name *</Label>
+              <Input
+                id="name"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                placeholder="Enter project name"
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                placeholder="Describe your project"
+                rows={3}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="type">Project Type</Label>
+                <Select
+                  value={formData.type}
+                  onValueChange={(value) => handleSelectChange("type", value)}
+                >
+                  <SelectTrigger id="type">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="website">Website</SelectItem>
+                    <SelectItem value="mobile_app">Mobile App</SelectItem>
+                    <SelectItem value="branding">Branding</SelectItem>
+                    <SelectItem value="marketing">Marketing</SelectItem>
+                    <SelectItem value="design">Design</SelectItem>
+                    <SelectItem value="development">Development</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="status">Status</Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value) => handleSelectChange("status", value)}
+                >
+                  <SelectTrigger id="status">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="review">Review</SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="start_date">Start Date</Label>
+                <Input
+                  id="start_date"
+                  name="start_date"
+                  type="date"
+                  value={formData.start_date}
+                  onChange={handleChange}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="due_date">Due Date</Label>
+                <Input
+                  id="due_date"
+                  name="due_date"
+                  type="date"
+                  value={formData.due_date}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Creating..." : "Create Project"}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
