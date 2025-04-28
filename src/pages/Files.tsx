@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useFiles } from "@/hooks/useFiles";
 import { FilePreviewDialog } from "@/components/files/FilePreviewDialog";
@@ -25,19 +24,15 @@ export default function Files() {
     { id: null, name: "Home" }
   ]);
   
-  // Preview dialog state
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   
-  // Rename dialog state
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [itemToRename, setItemToRename] = useState<{id: string, name: string, type: "file" | "folder"} | null>(null);
   
-  // Delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{id: string, name: string, type: "file" | "folder", path?: string} | null>(null);
   
-  // Move dialog state
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [itemToMove, setItemToMove] = useState<{id: string, name: string, type: "file" | "folder"} | null>(null);
 
@@ -56,7 +51,6 @@ export default function Files() {
     getFileUrl
   } = useFiles(currentFolderId);
 
-  // Filter files and folders based on search query
   const filteredFolders = folders?.filter(folder => 
     folder.name.toLowerCase().includes(searchQuery.toLowerCase())
   ) || [];
@@ -65,24 +59,27 @@ export default function Files() {
     file.name.toLowerCase().includes(searchQuery.toLowerCase())
   ) || [];
 
-  // Handle file and folder operations
   const handleUploadComplete = async (file: File) => {
     try {
-      // The actual upload is handled in the UploadDialog component
-      // This function is called for each file
-      return await uploadFile(file, currentFolderId);
+      return await uploadFile({
+        file,
+        parentFolderId: currentFolderId
+      });
     } catch (error) {
       console.error('Upload error:', error);
-      throw error; // Re-throw to let the UploadDialog component handle it
+      throw error;
     }
   };
 
   const handleCreateFolder = async (name: string) => {
     try {
-      return await createFolder(name, currentFolderId);
+      return await createFolder({
+        name,
+        parentFolderId: currentFolderId
+      });
     } catch (error) {
       console.error('Create folder error:', error);
-      throw error; // Re-throw to let the CreateFolderDialog component handle it
+      throw error;
     }
   };
 
@@ -91,7 +88,10 @@ export default function Files() {
 
     try {
       if (itemToDelete.type === 'file') {
-        await deleteFile(itemToDelete.id, itemToDelete.path || '');
+        await deleteFile({
+          fileId: itemToDelete.id,
+          filePath: itemToDelete.path || ''
+        });
       } else {
         await deleteFolder(itemToDelete.id);
       }
@@ -108,9 +108,15 @@ export default function Files() {
 
     try {
       if (itemToRename.type === 'file') {
-        await renameFile(itemToRename.id, newName);
+        await renameFile({
+          fileId: itemToRename.id,
+          newName
+        });
       } else {
-        await renameFolder(itemToRename.id, newName);
+        await renameFolder({
+          folderId: itemToRename.id,
+          newName
+        });
       }
       setItemToRename(null);
       setRenameDialogOpen(false);
@@ -125,9 +131,15 @@ export default function Files() {
 
     try {
       if (itemToMove.type === 'file') {
-        await moveFile(itemToMove.id, destinationFolderId);
+        await moveFile({
+          fileId: itemToMove.id,
+          newFolderId: destinationFolderId
+        });
       } else {
-        await moveFolder(itemToMove.id, destinationFolderId);
+        await moveFolder({
+          folderId: itemToMove.id,
+          newParentFolderId: destinationFolderId
+        });
       }
       setItemToMove(null);
       setMoveDialogOpen(false);
@@ -137,15 +149,12 @@ export default function Files() {
     }
   };
 
-  // Navigate to a folder
   const navigateToFolder = (folderId: string, folderName: string) => {
     setCurrentFolderId(folderId);
     setBreadcrumbs(prev => [...prev, { id: folderId, name: folderName }]);
   };
 
-  // Navigate using breadcrumbs
   const navigateToBreadcrumb = (index: number) => {
-    // Handle "root" or "home" navigation
     if (index === 0) {
       setCurrentFolderId(null);
       setBreadcrumbs([{ id: null, name: "Home" }]);

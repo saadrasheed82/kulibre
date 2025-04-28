@@ -48,7 +48,6 @@ import type { Database } from "@/integrations/supabase/types";
 import { FileUploader } from "@/components/files/FileUploader";
 import { safelyInsertProjectMembers } from "@/utils/supabase-helpers";
 
-// Define the form schema with Zod
 const formSchema = z.object({
   name: z.string().min(2, "Project name must be at least 2 characters"),
   client_id: z.string().optional(),
@@ -108,7 +107,6 @@ export function NewProjectModal({ open, onOpenChange }: NewProjectModalProps) {
     date: undefined,
   });
 
-  // Initialize the form
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -120,13 +118,9 @@ export function NewProjectModal({ open, onOpenChange }: NewProjectModalProps) {
     },
   });
 
-  // Fetch clients and team members when the modal opens
   React.useEffect(() => {
     if (open) {
-      // Set a loading state while fetching data
       setIsLoading(true);
-      
-      // Use Promise.allSettled to handle both requests independently
       Promise.allSettled([
         fetchClients(),
         fetchTeamMembers()
@@ -138,18 +132,16 @@ export function NewProjectModal({ open, onOpenChange }: NewProjectModalProps) {
 
   const fetchClients = async () => {
     try {
-      const { data, error } = await supabase
-        .from("clients")
-        .select("id, name")
-        .order("name");
+      const { data: clients, error } = await supabase
+        .from('clients')
+        .select('id, name')
+        .order('name');
 
       if (error) throw error;
-      setClients(data || []);
-      return data;
+      setClients(clients || []);
+      return clients;
     } catch (error) {
       console.error("Error fetching clients:", error);
-      // Don't show toast for this error to avoid UI disruption
-      // Just set empty array to allow the form to work
       setClients([]);
       return [];
     }
@@ -168,8 +160,6 @@ export function NewProjectModal({ open, onOpenChange }: NewProjectModalProps) {
       return data;
     } catch (error) {
       console.error("Error fetching team members:", error);
-      // Don't show toast for this error to avoid UI disruption
-      // Just set empty array to allow the form to work
       setTeamMembers([]);
       return [];
     }
@@ -190,7 +180,6 @@ export function NewProjectModal({ open, onOpenChange }: NewProjectModalProps) {
     setIsLoading(true);
 
     try {
-      // Get the current user with better error handling
       const { data, error: userError } = await supabase.auth.getUser();
       
       if (userError) {
@@ -205,19 +194,15 @@ export function NewProjectModal({ open, onOpenChange }: NewProjectModalProps) {
           description: "Please log in to create a project",
           variant: "destructive",
         });
-        // Close the modal
         onOpenChange(false);
-        // Redirect to login page
         window.location.href = '/login';
         return;
       }
 
       const user = data.user;
       
-      // Add milestones to the form values
       values.milestones = milestones;
 
-      // Create the project with proper error handling
       console.log("Creating project with user ID:", user.id);
       
       const projectData = {
@@ -251,21 +236,17 @@ export function NewProjectModal({ open, onOpenChange }: NewProjectModalProps) {
       
       console.log("Project created successfully:", project);
 
-      // If team members were selected, assign them to the project
       if (values.team_members && values.team_members.length > 0) {
-        // Use our utility function to safely add team members
         const result = await safelyInsertProjectMembers(project.id, values.team_members);
         
         if (!result.success && result.error) {
           console.warn("Note: Project was created but there was an issue adding team members:", result.error);
-          // Only throw if it's not the recursion error
           if (!result.error.includes("policy issue")) {
             throw new Error(`Failed to add team members: ${result.error}`);
           }
         }
       }
 
-      // If milestones were added, create them
       if (milestones.length > 0) {
         const projectMilestones = milestones.map((milestone) => ({
           project_id: project.id,
@@ -280,40 +261,30 @@ export function NewProjectModal({ open, onOpenChange }: NewProjectModalProps) {
         if (milestoneError) throw milestoneError;
       }
 
-      // If files were uploaded, associate them with the project
       if (uploadedFiles.length > 0) {
         // Assuming you have a way to associate files with projects
         // This would depend on your file storage implementation
       }
 
-      // Show success message
       toast({
         title: "Success",
         description: `Project '${values.name}' created successfully!`,
       });
 
-      // Just close the modal - the parent component will handle refreshing the list
       onOpenChange(false);
     } catch (error: any) {
       console.error("Error creating project:", error);
       
-      // Check if this is the infinite recursion error
       if (error?.message && error.message.includes("infinite recursion") && error.message.includes("project_members")) {
-        // This is the specific error we're handling
         console.log("Detected policy recursion issue - project was likely created");
-        
-        // Show success message instead of error
         toast({
           title: "Success",
           description: `Project '${values.name}' created successfully!`,
         });
-        
-        // Close the modal
         onOpenChange(false);
-        return; // Exit early to avoid showing error
+        return;
       }
       
-      // Provide a more detailed error message for other errors
       let errorMessage = "Failed to create project. ";
       if (error?.message) {
         errorMessage += error.message;
@@ -325,7 +296,6 @@ export function NewProjectModal({ open, onOpenChange }: NewProjectModalProps) {
         variant: "destructive",
       });
       
-      // Only close the modal for non-authentication errors
       if (!errorMessage.includes("Authentication")) {
         onOpenChange(false);
       }
@@ -334,21 +304,17 @@ export function NewProjectModal({ open, onOpenChange }: NewProjectModalProps) {
     }
   };
 
-  // Add error boundary handling
   const [hasError, setHasError] = React.useState(false);
   
   React.useEffect(() => {
-    // Reset error state when modal opens/closes
     setHasError(false);
   }, [open]);
   
-  // Error handler function
   const handleError = (error: Error) => {
     console.error("Error in modal:", error);
     setHasError(true);
   };
   
-  // Wrap the component in an error boundary
   React.useEffect(() => {
     window.addEventListener('error', (event) => {
       if (open) {

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { v4 as uuidv4 } from 'uuid';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -67,6 +66,16 @@ import {
   XCircle,
   Mail
 } from "lucide-react";
+
+interface UpdateProfileData {
+  avatar_url?: string;
+  company?: string;
+  created_at?: string;
+  full_name?: string;
+  id?: string;
+  role?: Database["public"]["Enums"]["user_role"];
+  updated_at?: string;
+}
 
 // Define types for our team members and roles
 type TeamMember = {
@@ -663,6 +672,50 @@ export default function Team() {
       default:
         return role;
     }
+  };
+
+  const handleActivate = async (userId: string) => {
+    const { error } = await supabase.auth.admin.updateUserById(userId, {
+      user_metadata: { active: true }
+    });
+    
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to activate user",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Update local state
+    setTeamMembers(prev => 
+      prev.map(member => 
+        member.id === userId ? { ...member } : member
+      )
+    );
+  };
+
+  const handleDeactivate = async (userId: string) => {
+    const { error } = await supabase.auth.admin.updateUserById(userId, {
+      user_metadata: { active: false }
+    });
+    
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to deactivate user",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Update local state
+    setTeamMembers(prev => 
+      prev.map(member => 
+        member.id === userId ? { ...member } : member
+      )
+    );
   };
 
   return (
