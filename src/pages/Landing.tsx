@@ -485,27 +485,27 @@ export default function Landing() {
             <div>
               <h3 className="font-semibold mb-4">Company</h3>
               <ul className="space-y-2">
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground">About</a></li>
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground">Careers</a></li>
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground">Blog</a></li>
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground">Contact</a></li>
+                <li><Link to="/about" className="text-sm text-muted-foreground hover:text-foreground">About</Link></li>
+                <li><Link to="/careers" className="text-sm text-muted-foreground hover:text-foreground">Careers</Link></li>
+                <li><Link to="/blog" className="text-sm text-muted-foreground hover:text-foreground">Blog</Link></li>
+                <li><Link to="/contact" className="text-sm text-muted-foreground hover:text-foreground">Contact</Link></li>
               </ul>
             </div>
             <div>
               <h3 className="font-semibold mb-4">Resources</h3>
               <ul className="space-y-2">
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground">Documentation</a></li>
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground">Tutorials</a></li>
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground">Support</a></li>
-                <li><a href="#faq" className="text-sm text-muted-foreground hover:text-foreground">FAQ</a></li>
+                <li><Link to="/documentation" className="text-sm text-muted-foreground hover:text-foreground">Documentation</Link></li>
+                <li><Link to="/tutorials" className="text-sm text-muted-foreground hover:text-foreground">Tutorials</Link></li>
+                <li><Link to="/support" className="text-sm text-muted-foreground hover:text-foreground">Support</Link></li>
+                <li><Link to="/faq" className="text-sm text-muted-foreground hover:text-foreground">FAQ</Link></li>
               </ul>
             </div>
             <div>
               <h3 className="font-semibold mb-4">Legal</h3>
               <ul className="space-y-2">
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground">Privacy</a></li>
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground">Terms</a></li>
-                <li><a href="#" className="text-sm text-muted-foreground hover:text-foreground">Security</a></li>
+                <li><Link to="/privacy" className="text-sm text-muted-foreground hover:text-foreground">Privacy</Link></li>
+                <li><Link to="/terms" className="text-sm text-muted-foreground hover:text-foreground">Terms</Link></li>
+                <li><Link to="/security" className="text-sm text-muted-foreground hover:text-foreground">Security</Link></li>
               </ul>
             </div>
           </div>
