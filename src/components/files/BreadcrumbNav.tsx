@@ -1,51 +1,39 @@
-import { 
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Home, ChevronRight } from "lucide-react";
 
-export interface FolderPath {
-  id: string;
-  name: string;
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
+import { Home } from "lucide-react";
+
+interface BreadcrumbNavProps {
+  folderPath: { id: string; name: string }[];
+  onNavigate: (folderId: string | null, index: number) => void;
 }
 
-export interface BreadcrumbNavProps {
-  folderPath: FolderPath[];
-  onNavigate: (folderId: string, index: number) => void;
-}
-
-export function BreadcrumbNav({
-  folderPath,
-  onNavigate
-}: BreadcrumbNavProps) {
+export function BreadcrumbNav({ folderPath, onNavigate }: BreadcrumbNavProps) {
   return (
     <Breadcrumb>
       <BreadcrumbList>
         <BreadcrumbItem>
-          <BreadcrumbLink onClick={() => onNavigate("root", 0)} className="flex items-center">
+          <BreadcrumbLink onClick={() => onNavigate(null, 0)} className="flex items-center hover:underline cursor-pointer">
             <Home className="h-4 w-4 mr-1" />
-            My Files
+            Home
           </BreadcrumbLink>
         </BreadcrumbItem>
         
         {folderPath.map((folder, index) => (
-          <BreadcrumbItem key={folder.id}>
-            <BreadcrumbSeparator>
-              <ChevronRight className="h-4 w-4" />
-            </BreadcrumbSeparator>
-            
-            {index === folderPath.length - 1 ? (
-              <BreadcrumbPage>{folder.name}</BreadcrumbPage>
-            ) : (
-              <BreadcrumbLink onClick={() => onNavigate(folder.id, index + 1)}>
-                {folder.name}
-              </BreadcrumbLink>
-            )}
-          </BreadcrumbItem>
+          <>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem key={folder.id || `folder-${index}`}>
+              {index === folderPath.length - 1 ? (
+                <BreadcrumbPage>{folder.name}</BreadcrumbPage>
+              ) : (
+                <BreadcrumbLink 
+                  onClick={() => onNavigate(folder.id, index + 1)}
+                  className="hover:underline cursor-pointer"
+                >
+                  {folder.name}
+                </BreadcrumbLink>
+              )}
+            </BreadcrumbItem>
+          </>
         ))}
       </BreadcrumbList>
     </Breadcrumb>

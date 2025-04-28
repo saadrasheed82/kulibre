@@ -9,74 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      clients: {
-        Row: {
-          id: string
-          name: string
-          email: string | null
-          phone: string | null
-          company: string | null
-          created_at: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          id?: string
-          name: string
-          email?: string | null
-          phone?: string | null
-          company?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          id?: string
-          name?: string
-          email?: string | null
-          phone?: string | null
-          company?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      project_milestones: {
-        Row: {
-          id: string
-          project_id: string
-          name: string
-          due_date: string | null
-          completed_at: string | null
-          created_at: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          id?: string
-          project_id: string
-          name: string
-          due_date?: string | null
-          completed_at?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          id?: string
-          project_id?: string
-          name?: string
-          due_date?: string | null
-          completed_at?: string | null
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "project_milestones_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
       files: {
         Row: {
           content_type: string | null
@@ -168,8 +100,6 @@ export type Database = {
           id: string
           role: Database["public"]["Enums"]["user_role"]
           updated_at: string | null
-          email: string | null
-          active: boolean | null
         }
         Insert: {
           avatar_url?: string | null
@@ -179,8 +109,6 @@ export type Database = {
           id: string
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string | null
-          email?: string | null
-          active?: boolean | null
         }
         Update: {
           avatar_url?: string | null
@@ -190,48 +118,8 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string | null
-          email?: string | null
-          active?: boolean | null
         }
         Relationships: []
-      }
-      team_invitations: {
-        Row: {
-          id: string
-          email: string
-          role: string
-          user_id: string
-          created_at: string | null
-          expires_at: string | null
-          accepted_at: string | null
-        }
-        Insert: {
-          id?: string
-          email: string
-          role: string
-          user_id: string
-          created_at?: string | null
-          expires_at?: string | null
-          accepted_at?: string | null
-        }
-        Update: {
-          id?: string
-          email?: string
-          role?: string
-          user_id?: string
-          created_at?: string | null
-          expires_at?: string | null
-          accepted_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "team_invitations_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          }
-        ]
       }
       project_members: {
         Row: {

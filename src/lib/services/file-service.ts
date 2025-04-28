@@ -1,358 +1,305 @@
 
-import { supabase } from "@/integrations/supabase/client";
-import type { FileItem } from "@/types/files";
+import { supabase } from '@/integrations/supabase/client';
+import { FileItem, FolderItem } from '@/types/files';
 
-export async function uploadFile(file: File, parentFolderId: string | null = null) {
+// Upload a file to Supabase Storage
+export async function uploadFile(file: File, parentFolderId: string | null = null): Promise<FileItem> {
   try {
-    // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError) throw new Error(`Authentication error: ${userError.message}`);
-    if (!user) throw new Error('User not authenticated');
-
-    // Generate a unique file path
-    const fileExt = file.name.split('.').pop();
-    const filePath = `${user.id}/${crypto.randomUUID()}.${fileExt}`;
+    // Generate a unique file path to avoid collisions
+    const uniquePrefix = Date.now().toString();
+    const filePath = `${uniquePrefix}_${file.name}`;
     
-    // First upload to storage
-    const { error: uploadError } = await supabase.storage
-      .from('file_uploads')
+    // First, upload the file to storage
+    const { data: storageData, error: storageError } = await supabase.storage
+      .from('files')
       .upload(filePath, file, {
         cacheControl: '3600',
         upsert: false
       });
-      
-    if (uploadError) {
-      if (uploadError.message.includes('already exists')) {
-        throw new Error('A file with this name already exists. Please try again with a different file.');
-      }
-      throw new Error(`Storage error: ${uploadError.message}`);
-    }
-
-    // Check if file with same name already exists in the same parent
-    let checkQuery = supabase
-      .from('files')
-      .select('id')
-      .eq('name', file.name)
-      .eq('user_id', user.id);
     
-    // Handle null parent folder ID differently
-    if (parentFolderId === null) {
-      checkQuery = checkQuery.is('parent_folder_id', null);
-    } else {
-      checkQuery = checkQuery.eq('parent_folder_id', parentFolderId);
+    if (storageError) {
+      throw new Error(`Storage error: ${storageError.message}`);
     }
     
-    const { data: existingFiles, error: checkError } = await checkQuery;
-    
-    if (checkError) throw new Error(`Error checking for existing files: ${checkError.message}`);
-    
-    if (existingFiles && existingFiles.length > 0) {
-      throw new Error(`A file named "${file.name}" already exists in this location`);
+    // Then, create a record in the files table
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData || !userData.user) {
+      throw new Error('User not authenticated');
     }
     
-    // Then create file record in database
-    const { error: dbError, data: fileRecord } = await supabase
+    const userId = userData.user.id;
+    
+    const { data: fileRecord, error: fileError } = await supabase
       .from('files')
       .insert({
         name: file.name,
-        type: getFileType(file.type),
-        size: file.size,
-        content_type: file.type,
         path: filePath,
-        parent_folder_id: parentFolderId,
-        user_id: user.id
+        size: file.size,
+        type: determineFileType(file.name),
+        content_type: file.type,
+        user_id: userId,
+        parent_folder_id: parentFolderId
       })
-      .select()
+      .select('*')
       .single();
-
-    if (dbError) {
-      // If database insert fails, try to clean up the uploaded file
-      await supabase.storage.from('file_uploads').remove([filePath]);
-      throw new Error(`Database error: ${dbError.message}`);
+    
+    if (fileError) {
+      // If the file record could not be created, try to delete the uploaded file
+      await supabase.storage.from('files').remove([filePath]);
+      throw new Error(`Database error: ${fileError.message}`);
     }
     
-    return fileRecord;
+    return fileRecord as unknown as FileItem;
   } catch (error) {
-    console.error('Error uploading file:', error);
+    console.error('Error in uploadFile:', error);
     throw error;
   }
 }
 
-export async function createFolder(name: string, parentFolderId: string | null = null) {
+// Create a new folder in the database
+export async function createFolder(name: string, parentFolderId: string | null = null): Promise<FolderItem> {
   try {
-    // Get the current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError) throw new Error(`Authentication error: ${userError.message}`);
-    if (!user) throw new Error('User not authenticated');
-
-    // Check if folder with same name already exists in the same parent
-    let query = supabase
-      .from('folders')
-      .select('id')
-      .eq('name', name)
-      .eq('user_id', user.id);
-    
-    // Handle null parent folder ID differently
-    if (parentFolderId === null) {
-      query = query.is('parent_folder_id', null);
-    } else {
-      query = query.eq('parent_folder_id', parentFolderId);
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData || !userData.user) {
+      throw new Error('User not authenticated');
     }
     
-    const { data: existingFolders, error: checkError } = await query;
+    const userId = userData.user.id;
     
-    if (checkError) throw new Error(`Error checking for existing folders: ${checkError.message}`);
-    
-    if (existingFolders && existingFolders.length > 0) {
-      throw new Error(`A folder named "${name}" already exists in this location`);
-    }
-
-    // Create the folder
-    const { error, data } = await supabase
+    const { data, error } = await supabase
       .from('folders')
       .insert({
         name,
         parent_folder_id: parentFolderId,
-        user_id: user.id
+        user_id: userId
       })
-      .select()
+      .select('*')
       .single();
-
-    if (error) throw new Error(`Database error: ${error.message}`);
-    return data;
+    
+    if (error) {
+      throw new Error(`Error creating folder: ${error.message}`);
+    }
+    
+    return data as unknown as FolderItem;
   } catch (error) {
-    console.error('Error creating folder:', error);
+    console.error('Error in createFolder:', error);
     throw error;
   }
 }
 
-export async function deleteFile(fileId: string, filePath: string) {
+// Delete a file (both from storage and database)
+export async function deleteFile(fileId: string, filePath: string): Promise<void> {
   try {
-    // Delete from storage first
+    // First delete from storage
     const { error: storageError } = await supabase.storage
-      .from('file_uploads')
+      .from('files')
       .remove([filePath]);
-
-    if (storageError) throw storageError;
-
-    // Then delete from database
+    
+    if (storageError) {
+      throw new Error(`Storage error: ${storageError.message}`);
+    }
+    
+    // Then delete from the database
     const { error: dbError } = await supabase
       .from('files')
       .delete()
       .eq('id', fileId);
-
-    if (dbError) throw dbError;
+    
+    if (dbError) {
+      throw new Error(`Database error: ${dbError.message}`);
+    }
   } catch (error) {
-    console.error('Error deleting file:', error);
+    console.error('Error in deleteFile:', error);
     throw error;
   }
 }
 
-export async function deleteFolder(folderId: string) {
+// Delete a folder and all its contents
+export async function deleteFolder(folderId: string): Promise<void> {
   try {
-    // Due to CASCADE delete, this will automatically delete all subfolders and files
+    // Get all files in this folder
+    const { data: files } = await supabase
+      .from('files')
+      .select('*')
+      .eq('parent_folder_id', folderId);
+    
+    // Get all subfolders in this folder
+    const { data: subfolders } = await supabase
+      .from('folders')
+      .select('*')
+      .eq('parent_folder_id', folderId);
+    
+    // Recursively delete subfolders
+    if (subfolders && subfolders.length > 0) {
+      await Promise.all(subfolders.map(subfolder => deleteFolder(subfolder.id)));
+    }
+    
+    // Delete all files in folder
+    if (files && files.length > 0) {
+      // First, delete files from storage
+      const filePaths = files.map(file => file.path);
+      await supabase.storage.from('files').remove(filePaths);
+      
+      // Then, delete records from database
+      await Promise.all(files.map(file => {
+        return supabase
+          .from('files')
+          .delete()
+          .eq('id', file.id);
+      }));
+    }
+    
+    // Finally, delete the folder itself
     const { error } = await supabase
       .from('folders')
       .delete()
       .eq('id', folderId);
-
-    if (error) throw error;
-  } catch (error) {
-    console.error('Error deleting folder:', error);
-    throw error;
-  }
-}
-
-export async function renameFile(fileId: string, newName: string) {
-  try {
-    const { error, data } = await supabase
-      .from('files')
-      .update({ name: newName })
-      .eq('id', fileId)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error renaming file:', error);
-    throw error;
-  }
-}
-
-export async function renameFolder(folderId: string, newName: string) {
-  try {
-    const { error, data } = await supabase
-      .from('folders')
-      .update({ name: newName })
-      .eq('id', folderId)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error renaming folder:', error);
-    throw error;
-  }
-}
-
-export async function getFileUrl(filePath: string) {
-  try {
-    const { data, error } = await supabase.storage
-      .from('file_uploads')
-      .createSignedUrl(filePath, 3600); // 1 hour expiry
-
-    if (error) throw error;
-    return data.signedUrl;
-  } catch (error) {
-    console.error('Error getting file URL:', error);
-    throw error;
-  }
-}
-
-export async function moveFile(fileId: string, newFolderId: string | null) {
-  try {
-    // Check if the file exists
-    const { data: fileData, error: fileError } = await supabase
-      .from('files')
-      .select('name, parent_folder_id')
-      .eq('id', fileId)
-      .single();
     
-    if (fileError) throw new Error(`Error finding file: ${fileError.message}`);
-    if (!fileData) throw new Error('File not found');
-    
-    // Check if a file with the same name already exists in the destination folder
-    let checkQuery = supabase
-      .from('files')
-      .select('id')
-      .eq('name', fileData.name);
-    
-    // Handle null destination folder ID differently
-    if (newFolderId === null) {
-      checkQuery = checkQuery.is('parent_folder_id', null);
-    } else {
-      checkQuery = checkQuery.eq('parent_folder_id', newFolderId);
+    if (error) {
+      throw new Error(`Error deleting folder: ${error.message}`);
     }
-    
-    const { data: existingFiles, error: checkError } = await checkQuery;
-    
-    if (checkError) throw new Error(`Error checking destination folder: ${checkError.message}`);
-    
-    if (existingFiles && existingFiles.length > 0) {
-      throw new Error(`A file with the name "${fileData.name}" already exists in the destination folder`);
-    }
-    
-    // Move the file
-    const { error, data } = await supabase
-      .from('files')
-      .update({ parent_folder_id: newFolderId })
-      .eq('id', fileId)
-      .select()
-      .single();
-
-    if (error) throw new Error(`Error moving file: ${error.message}`);
-    return data;
   } catch (error) {
-    console.error('Error moving file:', error);
+    console.error('Error in deleteFolder:', error);
     throw error;
   }
 }
 
-export async function moveFolder(folderId: string, newParentFolderId: string | null) {
+// Rename a file
+export async function renameFile(fileId: string, newName: string): Promise<void> {
   try {
-    // Check if the folder exists
-    const { data: folderData, error: folderError } = await supabase
+    const { error } = await supabase
+      .from('files')
+      .update({ name: newName, updated_at: new Date().toISOString() })
+      .eq('id', fileId);
+    
+    if (error) {
+      throw new Error(`Error renaming file: ${error.message}`);
+    }
+  } catch (error) {
+    console.error('Error in renameFile:', error);
+    throw error;
+  }
+}
+
+// Rename a folder
+export async function renameFolder(folderId: string, newName: string): Promise<void> {
+  try {
+    const { error } = await supabase
       .from('folders')
-      .select('name, parent_folder_id')
-      .eq('id', folderId)
-      .single();
+      .update({ name: newName, updated_at: new Date().toISOString() })
+      .eq('id', folderId);
     
-    if (folderError) throw new Error(`Error finding folder: ${folderError.message}`);
-    if (!folderData) throw new Error('Folder not found');
+    if (error) {
+      throw new Error(`Error renaming folder: ${error.message}`);
+    }
+  } catch (error) {
+    console.error('Error in renameFolder:', error);
+    throw error;
+  }
+}
+
+// Move a file to a different folder
+export async function moveFile(fileId: string, newFolderId: string | null): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('files')
+      .update({ 
+        parent_folder_id: newFolderId,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', fileId);
     
-    // Check for circular reference (can't move a folder into itself or its descendants)
+    if (error) {
+      throw new Error(`Error moving file: ${error.message}`);
+    }
+  } catch (error) {
+    console.error('Error in moveFile:', error);
+    throw error;
+  }
+}
+
+// Move a folder to a different parent folder
+export async function moveFolder(folderId: string, newParentFolderId: string | null): Promise<void> {
+  try {
+    // Check for circular reference (can't move a folder inside itself or its descendants)
     if (newParentFolderId) {
-      const isDescendant = await checkIfDescendant(newParentFolderId, folderId);
+      const isDescendant = await isDescendantFolder(newParentFolderId, folderId);
       if (isDescendant) {
-        throw new Error('Cannot move a folder into itself or its descendants');
+        throw new Error("Cannot move a folder into itself or its descendant");
       }
     }
     
-    // Check if a folder with the same name already exists in the destination folder
-    let checkQuery = supabase
+    const { error } = await supabase
       .from('folders')
-      .select('id')
-      .eq('name', folderData.name);
+      .update({ 
+        parent_folder_id: newParentFolderId,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', folderId);
     
-    // Handle null destination folder ID differently
-    if (newParentFolderId === null) {
-      checkQuery = checkQuery.is('parent_folder_id', null);
-    } else {
-      checkQuery = checkQuery.eq('parent_folder_id', newParentFolderId);
+    if (error) {
+      throw new Error(`Error moving folder: ${error.message}`);
     }
-    
-    const { data: existingFolders, error: checkError } = await checkQuery;
-    
-    if (checkError) throw new Error(`Error checking destination folder: ${checkError.message}`);
-    
-    if (existingFolders && existingFolders.length > 0) {
-      throw new Error(`A folder with the name "${folderData.name}" already exists in the destination folder`);
-    }
-    
-    // Move the folder
-    const { error, data } = await supabase
-      .from('folders')
-      .update({ parent_folder_id: newParentFolderId })
-      .eq('id', folderId)
-      .select()
-      .single();
-
-    if (error) throw new Error(`Error moving folder: ${error.message}`);
-    return data;
   } catch (error) {
-    console.error('Error moving folder:', error);
+    console.error('Error in moveFolder:', error);
     throw error;
   }
 }
 
-// Helper function to check if a folder is a descendant of another folder
-async function checkIfDescendant(folderId: string, potentialAncestorId: string): Promise<boolean> {
-  try {
-    // If the IDs are the same, it's trying to move into itself
-    if (folderId === potentialAncestorId) {
+// Check if folder is a descendant of another folder (for cycle detection)
+async function isDescendantFolder(folderId: string, potentialParentId: string): Promise<boolean> {
+  let currentFolderId = folderId;
+  
+  while (currentFolderId) {
+    if (currentFolderId === potentialParentId) {
       return true;
     }
     
-    const { data: folder, error } = await supabase
+    const { data } = await supabase
       .from('folders')
       .select('parent_folder_id')
-      .eq('id', folderId)
+      .eq('id', currentFolderId)
       .single();
+    
+    if (!data || !data.parent_folder_id) {
+      return false;
+    }
+    
+    currentFolderId = data.parent_folder_id;
+  }
+  
+  return false;
+}
 
+// Get URL for a file in storage
+export async function getFileUrl(filePath: string): Promise<string> {
+  try {
+    const { data, error } = await supabase.storage
+      .from('files')
+      .createSignedUrl(filePath, 3600); // 1 hour expiry
+    
     if (error) {
-      console.error('Error checking folder ancestry:', error);
-      return false;
+      throw new Error(`Error getting file URL: ${error.message}`);
     }
-
-    if (!folder || folder.parent_folder_id === null) {
-      return false;
-    }
-
-    if (folder.parent_folder_id === potentialAncestorId) {
-      return true;
-    }
-
-    return checkIfDescendant(folder.parent_folder_id, potentialAncestorId);
+    
+    return data.signedUrl;
   } catch (error) {
-    console.error('Error checking folder ancestry:', error);
-    return false;
+    console.error('Error in getFileUrl:', error);
+    throw error;
   }
 }
 
-function getFileType(mimeType: string): FileItem['type'] {
-  if (mimeType.startsWith('image/')) return 'image';
-  if (mimeType.startsWith('video/')) return 'video';
-  return 'document';
+// Helper function to determine file type
+function determineFileType(fileName: string): "image" | "document" | "video" {
+  const extension = fileName.split('.').pop()?.toLowerCase() || "";
+  
+  if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(extension)) {
+    return "image";
+  }
+  
+  if (['mp4', 'webm', 'ogg', 'mov', 'avi'].includes(extension)) {
+    return "video";
+  }
+  
+  return "document";
 }

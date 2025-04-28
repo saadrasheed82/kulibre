@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import * as fileService from '@/lib/services/file-service';
@@ -15,9 +16,16 @@ export function useFiles(parentFolderId: string | null = null) {
   } = useQuery({
     queryKey: ['files', parentFolderId],
     queryFn: async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData || !userData.user) {
+        console.log('User not authenticated in useFiles hook');
+        return [];
+      }
+      
       let query = supabase
         .from('files')
         .select('*')
+        .eq('user_id', userData.user.id)
         .order('name', { ascending: true });
       
       // Handle null parent folder ID differently
@@ -29,7 +37,12 @@ export function useFiles(parentFolderId: string | null = null) {
       
       const { data, error } = await query;
       
-      if (error) throw new Error(`Error fetching files: ${error.message}`);
+      if (error) {
+        console.error('Error fetching files:', error);
+        throw new Error(`Error fetching files: ${error.message}`);
+      }
+      
+      console.log('Files retrieved:', data?.length || 0);
       return data as FileItem[];
     },
     staleTime: 30000, // 30 seconds
@@ -43,9 +56,16 @@ export function useFiles(parentFolderId: string | null = null) {
   } = useQuery({
     queryKey: ['folders', parentFolderId],
     queryFn: async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData || !userData.user) {
+        console.log('User not authenticated in useFiles hook');
+        return [];
+      }
+      
       let query = supabase
         .from('folders')
         .select('*')
+        .eq('user_id', userData.user.id)
         .order('name', { ascending: true });
       
       // Handle null parent folder ID differently
@@ -57,14 +77,18 @@ export function useFiles(parentFolderId: string | null = null) {
       
       const { data, error } = await query;
       
-      if (error) throw new Error(`Error fetching folders: ${error.message}`);
+      if (error) {
+        console.error('Error fetching folders:', error);
+        throw new Error(`Error fetching folders: ${error.message}`);
+      }
       
       // Get file counts for each folder (optional, can be removed if causing performance issues)
       const foldersWithCount = await Promise.all((data || []).map(async folder => {
         const { count, error: countError } = await supabase
           .from('files')
           .select('*', { count: 'exact', head: true })
-          .eq('parent_folder_id', folder.id);
+          .eq('parent_folder_id', folder.id)
+          .eq('user_id', userData.user.id);
           
         return {
           ...folder,
@@ -72,6 +96,7 @@ export function useFiles(parentFolderId: string | null = null) {
         };
       }));
       
+      console.log('Folders retrieved:', foldersWithCount?.length || 0);
       return foldersWithCount as FolderItem[];
     },
     staleTime: 30000, // 30 seconds
