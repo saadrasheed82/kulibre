@@ -1,7 +1,6 @@
 
-import { Bell, Plus, Search } from "lucide-react";
+import { Bell, Search } from "lucide-react";
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -16,7 +15,7 @@ export function Header() {
     // Fetch user profile when component mounts
     const fetchUserProfile = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (user) {
         // Get profile data
         const { data: profile } = await supabase
@@ -24,14 +23,14 @@ export function Header() {
           .select('*')
           .eq('id', user.id)
           .single();
-        
+
         if (profile && profile.full_name) {
           // Generate initials from full name
           const names = profile.full_name.split(' ');
           const initials = names.length > 1
             ? `${names[0][0]}${names[names.length - 1][0]}`
             : names[0].substring(0, 2);
-          
+
           setUserInitials(initials.toUpperCase());
         } else {
           // Use email as fallback
@@ -44,21 +43,7 @@ export function Header() {
     fetchUserProfile();
   }, []);
 
-  const handleNewProject = () => {
-    // Check if user is authenticated before navigating to new project page
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        navigate('/projects/new');
-      } else {
-        toast({
-          title: "Authentication required",
-          description: "Please log in to create a new project",
-          variant: "destructive",
-        });
-        navigate('/login');
-      }
-    });
-  };
+
 
   return (
     <header className="border-b py-3 px-6 flex items-center justify-between bg-white">
@@ -76,15 +61,6 @@ export function Header() {
       </div>
 
       <div className="flex items-center gap-4">
-        <Button 
-          size="sm" 
-          variant="default" 
-          className="gap-1"
-          onClick={handleNewProject}
-        >
-          <Plus className="h-4 w-4" /> 
-          <span className="hidden md:inline">New Project</span>
-        </Button>
         <div className="relative">
           <Bell className="h-5 w-5 text-muted-foreground hover:text-foreground cursor-pointer" />
           <span className="absolute -top-1 -right-1 bg-creatively-purple text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">

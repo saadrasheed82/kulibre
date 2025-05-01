@@ -7,9 +7,15 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useState } from "react";
 import { Layout } from "./components/layout/Layout";
 import Index from "./pages/Index";
-import Projects from "./pages/Projects";
-import ProjectDetails from "./pages/ProjectDetails";
-import Calendar from "./pages/Calendar";
+import ProjectsPageSimple from "./pages/ProjectsPageSimple";
+import ProjectDetailsPage from "./pages/ProjectDetailsPage";
+// import Calendar from "./pages/Calendar";
+// import Calendar from "./pages/CalendarSimple";
+// import Calendar from "./pages/CalendarMinimal";
+// import Calendar from "./pages/CalendarStep1";
+// import Calendar from "./pages/CalendarStep2";
+import Calendar from "./pages/CalendarStep3";
+import TasksPage from "./pages/TasksPage";
 import Files from "./pages/Files";
 import Team from "./pages/Team";
 import Settings from "./pages/Settings";
@@ -54,24 +60,22 @@ export default function App() {
             <Route path="/careers" element={<Careers />} />
             <Route path="/blog" element={<Blog />} />
             <Route path="/contact" element={<Contact />} />
-            
+
             {/* Resource pages */}
             <Route path="/documentation" element={<Documentation />} />
             <Route path="/tutorials" element={<Tutorials />} />
             <Route path="/support" element={<Support />} />
             <Route path="/faq" element={<FAQ />} />
-            
+
             {/* Legal pages */}
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/security" element={<Security />} />
-            
+
             <Route path="/dashboard" element={<Layout><Index /></Layout>} />
-            <Route path="/projects" element={<Layout><Projects /></Layout>} />
-            <Route path="/projects/new" element={<Layout><ProjectDetails /></Layout>} />
-            <Route path="/projects/:id" element={<Layout><ProjectDetails /></Layout>} />
-            {/* Fallback route for invalid project IDs */}
-            <Route path="/projects/error" element={<Layout><Projects /></Layout>} />
+            <Route path="/projects" element={<Layout><ProjectsPageSimple /></Layout>} />
+            <Route path="/project/:id" element={<Layout><ProjectDetailsPage /></Layout>} />
+            <Route path="/tasks" element={<Layout><TasksPage /></Layout>} />
             <Route path="/calendar" element={<Layout><Calendar /></Layout>} />
             <Route path="/files" element={<Layout><Files /></Layout>} />
             <Route path="/team" element={<Layout><Team /></Layout>} />

@@ -33,6 +33,10 @@ export type Database = {
         }
         Relationships: []
       }
+<<<<<<< HEAD
+=======
+
+>>>>>>> 4bdaba1 (4/28/25 3)
       files: {
         Row: {
           content_type: string | null
@@ -145,6 +149,7 @@ export type Database = {
         }
         Relationships: []
       }
+<<<<<<< HEAD
       project_members: {
         Row: {
           assigned_at: string | null
@@ -248,6 +253,47 @@ export type Database = {
         }
         Relationships: []
       }
+=======
+      team_invitations: {
+        Row: {
+          id: string
+          email: string
+          role: string
+          user_id: string
+          created_at: string | null
+          expires_at: string | null
+          accepted_at: string | null
+        }
+        Insert: {
+          id?: string
+          email: string
+          role: string
+          user_id: string
+          created_at?: string | null
+          expires_at?: string | null
+          accepted_at?: string | null
+        }
+        Update: {
+          id?: string
+          email?: string
+          role?: string
+          user_id?: string
+          created_at?: string | null
+          expires_at?: string | null
+          accepted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_invitations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+
+>>>>>>> 4bdaba1 (4/28/25 3)
       subscriptions: {
         Row: {
           created_at: string
@@ -278,41 +324,188 @@ export type Database = {
         }
         Relationships: []
       }
-      tasks: {
+      projects: {
         Row: {
-          assigned_to: string | null
-          completed_at: string | null
-          created_at: string | null
-          description: string | null
-          due_date: string | null
           id: string
-          priority: Database["public"]["Enums"]["task_priority"] | null
-          project_id: string | null
-          title: string
+          name: string
+          description: string | null
+          client_id: string | null
+          type: Database["public"]["Enums"]["project_type"]
+          status: Database["public"]["Enums"]["project_status"]
+          start_date: string | null
+          due_date: string | null
+          budget: number | null
+          created_by: string | null
+          created_at: string | null
           updated_at: string | null
         }
         Insert: {
-          assigned_to?: string | null
-          completed_at?: string | null
-          created_at?: string | null
-          description?: string | null
-          due_date?: string | null
           id?: string
-          priority?: Database["public"]["Enums"]["task_priority"] | null
-          project_id?: string | null
-          title: string
+          name: string
+          description?: string | null
+          client_id?: string | null
+          type?: Database["public"]["Enums"]["project_type"]
+          status?: Database["public"]["Enums"]["project_status"]
+          start_date?: string | null
+          due_date?: string | null
+          budget?: number | null
+          created_by?: string | null
+          created_at?: string | null
           updated_at?: string | null
         }
         Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          client_id?: string | null
+          type?: Database["public"]["Enums"]["project_type"]
+          status?: Database["public"]["Enums"]["project_status"]
+          start_date?: string | null
+          due_date?: string | null
+          budget?: number | null
+          created_by?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      project_members: {
+        Row: {
+          project_id: string
+          user_id: string
+          role: string
+          assigned_at: string | null
+        }
+        Insert: {
+          project_id: string
+          user_id: string
+          role?: string
+          assigned_at?: string | null
+        }
+        Update: {
+          project_id?: string
+          user_id?: string
+          role?: string
+          assigned_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_members_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      project_files: {
+        Row: {
+          id: string
+          project_id: string
+          name: string
+          file_path: string
+          file_type: string
+          file_size: number
+          uploaded_by: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          name: string
+          file_path: string
+          file_type: string
+          file_size: number
+          uploaded_by?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          name?: string
+          file_path?: string
+          file_type?: string
+          file_size?: number
+          uploaded_by?: string | null
+          created_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_files_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_files_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      tasks: {
+        Row: {
+          id: string
+          title: string
+          description: string | null
+          project_id: string | null
+          status: string
+          priority: string
+          assigned_to: string | null
+          due_date: string | null
+          completed_at: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          title: string
+          description?: string | null
+          project_id?: string | null
+          status?: string
+          priority?: string
           assigned_to?: string | null
+          due_date?: string | null
           completed_at?: string | null
           created_at?: string | null
-          description?: string | null
-          due_date?: string | null
+          updated_at?: string | null
+        }
+        Update: {
           id?: string
-          priority?: Database["public"]["Enums"]["task_priority"] | null
-          project_id?: string | null
           title?: string
+          description?: string | null
+          project_id?: string | null
+          status?: string
+          priority?: string
+          assigned_to?: string | null
+          due_date?: string | null
+          completed_at?: string | null
+          created_at?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -323,6 +516,13 @@ export type Database = {
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
         ]
       }
       time_entries: {
@@ -379,12 +579,12 @@ export type Database = {
         | "completed"
         | "archived"
       project_type:
-        | "logo"
-        | "brand_identity"
-        | "web_design"
-        | "campaign"
-        | "video"
-        | "photography"
+        | "website"
+        | "mobile_app"
+        | "branding"
+        | "marketing"
+        | "design"
+        | "development"
         | "other"
       subscription_tier: "free" | "basic" | "premium"
       task_priority: "low" | "medium" | "high"
@@ -513,12 +713,12 @@ export const Constants = {
         "archived",
       ],
       project_type: [
-        "logo",
-        "brand_identity",
-        "web_design",
-        "campaign",
-        "video",
-        "photography",
+        "website",
+        "mobile_app",
+        "branding",
+        "marketing",
+        "design",
+        "development",
         "other",
       ],
       subscription_tier: ["free", "basic", "premium"],
