@@ -37,6 +37,7 @@ export interface FileCardProps {
   onMove: (id: string) => void;
   onShare: (id: string) => void;
   onDelete: (id: string) => void;
+  onClick?: () => void;
   className?: string;
   view?: "grid" | "list";
 }
@@ -54,6 +55,7 @@ export function FileCard({
   onMove,
   onShare,
   onDelete,
+  onClick,
   className,
   view = "grid"
 }: FileCardProps) {

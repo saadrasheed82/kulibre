@@ -11,35 +11,32 @@ export type Database = {
     Tables: {
       clients: {
         Row: {
+          created_at: string | null
           id: string
           name: string
-          email: string | null
-          phone: string | null
-          company: string | null
-          created_at: string | null
           updated_at: string | null
+          user_id: string | null
         }
         Insert: {
+          created_at?: string | null
           id?: string
           name: string
-          email?: string | null
-          phone?: string | null
-          company?: string | null
-          created_at?: string | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
+          created_at?: string | null
           id?: string
           name?: string
-          email?: string | null
-          phone?: string | null
-          company?: string | null
-          created_at?: string | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
+<<<<<<< HEAD
 
+=======
+>>>>>>> 59dda502a55cba9caec515ad5ad1f4a051cc986a
       files: {
         Row: {
           content_type: string | null
@@ -131,8 +128,6 @@ export type Database = {
           id: string
           role: Database["public"]["Enums"]["user_role"]
           updated_at: string | null
-          email: string | null
-          active: boolean | null
         }
         Insert: {
           avatar_url?: string | null
@@ -142,8 +137,6 @@ export type Database = {
           id: string
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string | null
-          email?: string | null
-          active?: boolean | null
         }
         Update: {
           avatar_url?: string | null
@@ -153,11 +146,10 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string | null
-          email?: string | null
-          active?: boolean | null
         }
         Relationships: []
       }
+<<<<<<< HEAD
       team_invitations: {
         Row: {
           id: string
@@ -197,6 +189,111 @@ export type Database = {
         ]
       }
 
+=======
+      project_members: {
+        Row: {
+          assigned_at: string | null
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string | null
+          project_id: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string | null
+          project_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_members_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_milestones: {
+        Row: {
+          created_at: string | null
+          due_date: string
+          id: string
+          name: string
+          project_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          due_date: string
+          id?: string
+          name: string
+          project_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          due_date?: string
+          id?: string
+          name?: string
+          project_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_milestones_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          client_id: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          name: string
+          start_date: string | null
+          status: Database["public"]["Enums"]["project_status"]
+          type: Database["public"]["Enums"]["project_type"]
+          updated_at: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          name: string
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["project_status"]
+          type?: Database["public"]["Enums"]["project_type"]
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          name?: string
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["project_status"]
+          type?: Database["public"]["Enums"]["project_type"]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+>>>>>>> 59dda502a55cba9caec515ad5ad1f4a051cc986a
       subscriptions: {
         Row: {
           created_at: string

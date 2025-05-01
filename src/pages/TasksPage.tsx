@@ -1,629 +1,408 @@
-import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { format, parseISO } from "date-fns";
-import { 
-  CheckCircle2, 
-  Circle, 
-  Clock, 
-  Filter, 
-  Plus, 
-  Search, 
-  SlidersHorizontal,
-  Calendar,
-  Trash2,
-  Edit,
-  MoreHorizontal
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogClose
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger
-} from "@/components/ui/dropdown-menu";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { format } from 'date-fns';
+import { CalendarIcon, CheckCircle2, Clock, Loader2, Plus, Trash2 } from 'lucide-react';
+import { toast } from '@/components/ui/sonner';
+import { cn } from '@/lib/utils';
 
-// Define Task type
-interface Task {
+// Define the Task type
+type Task = {
   id: string;
   title: string;
   description: string | null;
-  project_id: string | null;
-  status: "todo" | "in_progress" | "completed";
-  priority: "low" | "medium" | "high";
-  assigned_to: string | null;
+  status: string;
+  priority: string;
   due_date: string | null;
   completed_at: string | null;
+  user_id?: string;
   created_at: string;
   updated_at: string;
-  project?: {
-    id: string;
-    name: string;
-  };
-  assignee?: {
-    id: string;
-    full_name: string;
-    avatar_url: string | null;
-  };
-}
-
-// Define Project type for dropdown
-interface Project {
-  id: string;
-  name: string;
-}
-
-// Define User type for dropdown
-interface User {
-  id: string;
-  full_name: string;
-  avatar_url: string | null;
-}
+};
 
 export default function TasksPage() {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string | null>(null);
-  const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
-  const [projectFilter, setProjectFilter] = useState<string | null>(null);
-  const [assigneeFilter, setAssigneeFilter] = useState<string | null>(null);
-  const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
-  const [isEditTaskOpen, setIsEditTaskOpen] = useState(false);
-  const [currentTask, setCurrentTask] = useState<Task | null>(null);
-  const [newTask, setNewTask] = useState({
-    title: "",
-    description: "",
-    project_id: "",
-    status: "todo",
-    priority: "medium",
-    assigned_to: "",
-    due_date: null as Date | null
-  });
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Form state
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
+  const [status, setStatus] = useState('pending');
+  const [priority, setPriority] = useState('medium');
+  
+  const navigate = useNavigate();
+
+  // Check if user is authenticated
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) {
+        navigate('/login');
+      }
+    };
+    
+    checkUser();
+  }, [navigate]);
+
+  // Check if the tasks table exists
+  useEffect(() => {
+    const checkTasksTable = async () => {
+      try {
+        // Check if the table exists
+        const { error: checkError } = await supabase
+          .from('user_tasks')
+          .select('id')
+          .limit(1);
+        
+        // If the table doesn't exist, show a message
+        if (checkError) {
+          const errorMessage = checkError.message || JSON.stringify(checkError);
+          console.log('The user_tasks table does not exist. Please create it in the Supabase dashboard.');
+          console.log('Error details:', errorMessage);
+          
+          // Only show the toast once
+          toast.error('Tasks feature requires database setup. Please contact the administrator.', {
+            id: 'table-missing',
+            duration: 5000
+          });
+        }
+      } catch (error) {
+        console.error('Error checking table:', error);
+      }
+    };
+    
+    checkTasksTable();
+  }, []);
 
   // Fetch tasks
-  const { data: tasks, isLoading, error, refetch } = useQuery({
-    queryKey: ['tasks', searchQuery, statusFilter, priorityFilter, projectFilter, assigneeFilter],
-    queryFn: async () => {
-      let query = supabase
-        .from('tasks')
-        .select(`
-          *,
-          project:project_id (id, name),
-          assignee:assigned_to (id, full_name, avatar_url)
-        `);
+  useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        
+        if (!userData.user) {
+          throw new Error('User not authenticated');
+        }
+        
+        // Try to get tasks
+        const { data, error } = await supabase
+          .from('user_tasks')
+          .select('*')
+          .eq('user_id', userData.user.id)
+          .order('created_at', { ascending: false });
+        
+        if (error) {
+          // Table doesn't exist or other error, set empty tasks
+          console.error('Error fetching tasks:', error);
+          setTasks([]);
+          setFilteredTasks([]);
+          return;
+        }
+        
+        if (data) {
+          setTasks(data);
+          setFilteredTasks(data);
+        } else {
+          // No data returned, set empty arrays
+          setTasks([]);
+          setFilteredTasks([]);
+        }
+      } catch (error: any) {
+        console.error('Error fetching tasks:', error);
+        // Set empty arrays to prevent undefined errors
+        setTasks([]);
+        setFilteredTasks([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchTasks();
+  }, []);
 
-      // Apply filters
-      if (searchQuery) {
-        query = query.ilike('title', `%${searchQuery}%`);
-      }
-      
-      if (statusFilter) {
-        query = query.eq('status', statusFilter);
-      }
-      
-      if (priorityFilter) {
-        query = query.eq('priority', priorityFilter);
-      }
-      
-      if (projectFilter) {
-        query = query.eq('project_id', projectFilter);
-      }
-      
-      if (assigneeFilter) {
-        query = query.eq('assigned_to', assigneeFilter);
-      }
+  // Filter tasks based on active tab and search query
+  useEffect(() => {
+    let result = [...tasks];
+    
+    // Filter by status
+    if (activeTab !== 'all') {
+      result = result.filter(task => task.status === activeTab);
+    }
+    
+    // Filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        task => 
+          task.title.toLowerCase().includes(query) || 
+          (task.description && task.description.toLowerCase().includes(query))
+      );
+    }
+    
+    setFilteredTasks(result);
+  }, [tasks, activeTab, searchQuery]);
 
-      const { data, error } = await query.order('due_date', { ascending: true });
-
+  // Add a new task
+  const handleAddTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!title.trim()) {
+      toast.error('Task title is required');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      
+      if (!userData.user) {
+        throw new Error('User not authenticated');
+      }
+      
+      const newTask = {
+        title,
+        description: description || null,
+        due_date: dueDate ? dueDate.toISOString() : null,
+        status,
+        priority,
+        user_id: userData.user.id
+      };
+      
+      const { data, error } = await supabase
+        .from('user_tasks')
+        .insert(newTask)
+        .select()
+        .single();
+      
       if (error) {
-        console.error("Error fetching tasks:", error);
+        console.error('Error adding task:', error);
+        
+        // Check if it's a "relation does not exist" error
+        const errorText = JSON.stringify(error).toLowerCase();
+        if (errorText.includes('relation') && errorText.includes('exist')) {
+          toast.error('Tasks feature requires database setup. Please contact the administrator.', {
+            id: 'table-missing',
+            duration: 5000
+          });
+          return;
+        }
+        
         throw error;
       }
-
-      return data as Task[];
-    }
-  });
-
-  // Fetch projects for dropdown
-  const { data: projects } = useQuery({
-    queryKey: ['projects-for-tasks'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('id, name')
-        .order('name');
-
-      if (error) {
-        console.error("Error fetching projects:", error);
-        throw error;
+      
+      if (data) {
+        setTasks(prevTasks => [data, ...prevTasks]);
+        toast.success('Task added successfully');
+        
+        // Reset form
+        setTitle('');
+        setDescription('');
+        setDueDate(undefined);
+        setStatus('pending');
+        setPriority('medium');
       }
-
-      return data as Project[];
+    } catch (error: any) {
+      console.error('Error adding task:', error);
+      const errorMessage = error.message || (typeof error === 'string' ? error : 'Unknown error');
+      toast.error('Error adding task: ' + errorMessage);
+    } finally {
+      setIsSubmitting(false);
     }
-  });
+  };
 
-  // Fetch users for dropdown
-  const { data: users } = useQuery({
-    queryKey: ['users-for-tasks'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, avatar_url')
-        .order('full_name');
-
-      if (error) {
-        console.error("Error fetching users:", error);
-        throw error;
-      }
-
-      return data as User[];
-    }
-  });
-
-  // Add task mutation
-  const addTaskMutation = useMutation({
-    mutationFn: async (task: typeof newTask) => {
-      const { data, error } = await supabase
-        .from('tasks')
-        .insert([{
-          title: task.title,
-          description: task.description,
-          project_id: task.project_id || null,
-          status: task.status,
-          priority: task.priority,
-          assigned_to: task.assigned_to || null,
-          due_date: task.due_date ? format(task.due_date, 'yyyy-MM-dd') : null
-        }])
-        .select();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      toast({
-        title: "Task added",
-        description: "The task has been added successfully.",
-      });
-      setIsAddTaskOpen(false);
-      resetNewTaskForm();
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error adding task",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  });
-
-  // Update task mutation
-  const updateTaskMutation = useMutation({
-    mutationFn: async (task: Task) => {
-      const { data, error } = await supabase
-        .from('tasks')
-        .update({
-          title: task.title,
-          description: task.description,
-          project_id: task.project_id || null,
-          status: task.status,
-          priority: task.priority,
-          assigned_to: task.assigned_to || null,
-          due_date: task.due_date,
-          completed_at: task.status === 'completed' ? new Date().toISOString() : null
-        })
-        .eq('id', task.id)
-        .select();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      toast({
-        title: "Task updated",
-        description: "The task has been updated successfully.",
-      });
-      setIsEditTaskOpen(false);
-      setCurrentTask(null);
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error updating task",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  });
-
-  // Delete task mutation
-  const deleteTaskMutation = useMutation({
-    mutationFn: async (taskId: string) => {
+  // Update task status
+  const handleUpdateTaskStatus = async (taskId: string, newStatus: string) => {
+    try {
+      const updateData = newStatus === 'done' 
+        ? { status: newStatus, completed_at: new Date().toISOString() }
+        : { status: newStatus, completed_at: null };
+        
       const { error } = await supabase
-        .from('tasks')
+        .from('user_tasks')
+        .update(updateData)
+        .eq('id', taskId);
+      
+      if (error) {
+        console.error('Error updating task:', error);
+        
+        // Check if it's a "relation does not exist" error
+        const errorText = JSON.stringify(error).toLowerCase();
+        if (errorText.includes('relation') && errorText.includes('exist')) {
+          toast.error('Tasks feature requires database setup. Please contact the administrator.', {
+            id: 'table-missing',
+            duration: 5000
+          });
+          return;
+        }
+        
+        throw error;
+      }
+      
+      // Update local state
+      setTasks(prevTasks => 
+        prevTasks.map(task => 
+          task.id === taskId ? { ...task, ...updateData } : task
+        )
+      );
+      
+      toast.success(`Task marked as ${newStatus}`);
+    } catch (error: any) {
+      console.error('Error updating task:', error);
+      const errorMessage = error.message || (typeof error === 'string' ? error : 'Unknown error');
+      toast.error('Error updating task: ' + errorMessage);
+    }
+  };
+
+  // Delete task
+  const handleDeleteTask = async (taskId: string) => {
+    if (!confirm('Are you sure you want to delete this task?')) return;
+    
+    try {
+      const { error } = await supabase
+        .from('user_tasks')
         .delete()
         .eq('id', taskId);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      toast({
-        title: "Task deleted",
-        description: "The task has been deleted successfully.",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error deleting task",
-        description: error.message,
-        variant: "destructive",
-      });
+      
+      if (error) {
+        console.error('Error deleting task:', error);
+        
+        // Check if it's a "relation does not exist" error
+        const errorText = JSON.stringify(error).toLowerCase();
+        if (errorText.includes('relation') && errorText.includes('exist')) {
+          toast.error('Tasks feature requires database setup. Please contact the administrator.', {
+            id: 'table-missing',
+            duration: 5000
+          });
+          return;
+        }
+        
+        throw error;
+      }
+      
+      setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
+      toast.success('Task deleted successfully');
+    } catch (error: any) {
+      console.error('Error deleting task:', error);
+      const errorMessage = error.message || (typeof error === 'string' ? error : 'Unknown error');
+      toast.error('Error deleting task: ' + errorMessage);
     }
-  });
-
-  // Toggle task status mutation
-  const toggleTaskStatusMutation = useMutation({
-    mutationFn: async ({ taskId, newStatus }: { taskId: string; newStatus: string }) => {
-      const { error } = await supabase
-        .from('tasks')
-        .update({
-          status: newStatus,
-          completed_at: newStatus === 'completed' ? new Date().toISOString() : null
-        })
-        .eq('id', taskId);
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error updating task status",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  });
-
-  // Reset new task form
-  const resetNewTaskForm = () => {
-    setNewTask({
-      title: "",
-      description: "",
-      project_id: "",
-      status: "todo",
-      priority: "medium",
-      assigned_to: "",
-      due_date: null
-    });
-  };
-
-  // Handle edit task
-  const handleEditTask = (task: Task) => {
-    setCurrentTask(task);
-    setIsEditTaskOpen(true);
-  };
-
-  // Handle task status toggle
-  const handleToggleStatus = (taskId: string, currentStatus: string) => {
-    const newStatus = currentStatus === 'completed' ? 'todo' : 'completed';
-    toggleTaskStatusMutation.mutate({ taskId, newStatus });
   };
 
   // Format date for display
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'No due date';
-    try {
-      const date = parseISO(dateString);
-      return format(date, 'MMM d, yyyy');
-    } catch (error) {
-      console.error("Invalid date:", dateString);
-      return 'Invalid date';
-    }
+    return format(new Date(dateString), 'PPP');
   };
-
-  // Get priority badge color
-  const getPriorityColor = (priority: string) => {
-    const colors: Record<string, string> = {
-      high: "bg-red-100 text-red-800",
-      medium: "bg-amber-100 text-amber-800",
-      low: "bg-green-100 text-green-800"
-    };
-    return colors[priority] || "bg-gray-100 text-gray-800";
-  };
-
-  // Get status icon
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle2 className="h-5 w-5 text-green-500" />;
-      case 'in_progress':
-        return <Clock className="h-5 w-5 text-blue-500" />;
-      default:
-        return <Circle className="h-5 w-5 text-gray-400" />;
-    }
-  };
-
-  // Filter tasks by status for tabs
-  const todoTasks = tasks?.filter(task => task.status === 'todo') || [];
-  const inProgressTasks = tasks?.filter(task => task.status === 'in_progress') || [];
-  const completedTasks = tasks?.filter(task => task.status === 'completed') || [];
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold">Tasks</h1>
-        <p className="text-muted-foreground mt-1">Manage your tasks and track progress</p>
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="relative w-full sm:w-auto">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Tasks</h1>
+          <p className="text-muted-foreground">
+            Manage your personal tasks and to-dos
+          </p>
+        </div>
+        <div className="w-full md:w-1/3">
           <Input
-            type="search"
             placeholder="Search tasks..."
-            className="pl-8 w-full sm:w-[300px]"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full"
           />
-        </div>
-
-        <div className="flex gap-2 w-full sm:w-auto">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="h-10">
-                <Filter className="h-4 w-4 mr-2" />
-                Filters
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select
-                    value={statusFilter || ""}
-                    onValueChange={(value) => setStatusFilter(value || null)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="All statuses" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">All statuses</SelectItem>
-                      <SelectItem value="todo">To Do</SelectItem>
-                      <SelectItem value="in_progress">In Progress</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Priority</Label>
-                  <Select
-                    value={priorityFilter || ""}
-                    onValueChange={(value) => setPriorityFilter(value || null)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="All priorities" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">All priorities</SelectItem>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Project</Label>
-                  <Select
-                    value={projectFilter || ""}
-                    onValueChange={(value) => setProjectFilter(value || null)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="All projects" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">All projects</SelectItem>
-                      {projects?.map((project) => (
-                        <SelectItem key={project.id} value={project.id}>
-                          {project.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Assignee</Label>
-                  <Select
-                    value={assigneeFilter || ""}
-                    onValueChange={(value) => setAssigneeFilter(value || null)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="All assignees" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">All assignees</SelectItem>
-                      {users?.map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.full_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex justify-between">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setStatusFilter(null);
-                      setPriorityFilter(null);
-                      setProjectFilter(null);
-                      setAssigneeFilter(null);
-                    }}
-                  >
-                    Reset
-                  </Button>
-                  <Button>Apply Filters</Button>
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
-
-          <Button onClick={() => setIsAddTaskOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Task
-          </Button>
         </div>
       </div>
 
-      <Tabs defaultValue="all" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="todo">To Do</TabsTrigger>
-          <TabsTrigger value="in_progress">In Progress</TabsTrigger>
-          <TabsTrigger value="completed">Completed</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="all" className="mt-6">
-          {renderTasksList(tasks || [])}
-        </TabsContent>
-
-        <TabsContent value="todo" className="mt-6">
-          {renderTasksList(todoTasks)}
-        </TabsContent>
-
-        <TabsContent value="in_progress" className="mt-6">
-          {renderTasksList(inProgressTasks)}
-        </TabsContent>
-
-        <TabsContent value="completed" className="mt-6">
-          {renderTasksList(completedTasks)}
-        </TabsContent>
-      </Tabs>
-
-      {/* Add Task Dialog */}
-      <Dialog open={isAddTaskOpen} onOpenChange={setIsAddTaskOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Add New Task</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="title">Title</Label>
-              <Input
-                id="title"
-                value={newTask.title}
-                onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                placeholder="Task title"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={newTask.description}
-                onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-                placeholder="Task description"
-                rows={3}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Task Form */}
+        <Card className="md:col-span-1">
+          <CardHeader>
+            <CardTitle>Add New Task</CardTitle>
+            <CardDescription>
+              Create a new task to keep track of your to-dos
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleAddTask} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="project">Project</Label>
-                <Select
-                  value={newTask.project_id}
-                  onValueChange={(value) => setNewTask({ ...newTask, project_id: value })}
-                >
-                  <SelectTrigger id="project">
-                    <SelectValue placeholder="Select project" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">No project</SelectItem>
-                    {projects?.map((project) => (
-                      <SelectItem key={project.id} value={project.id}>
-                        {project.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="title">Title</Label>
+                <Input
+                  id="title"
+                  placeholder="Task title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  required
+                />
               </div>
+              
               <div className="space-y-2">
-                <Label htmlFor="assignee">Assignee</Label>
-                <Select
-                  value={newTask.assigned_to}
-                  onValueChange={(value) => setNewTask({ ...newTask, assigned_to: value })}
-                >
-                  <SelectTrigger id="assignee">
-                    <SelectValue placeholder="Select assignee" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Unassigned</SelectItem>
-                    {users?.map((user) => (
-                      <SelectItem key={user.id} value={user.id}>
-                        {user.full_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Task description (optional)"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={3}
+                />
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+              
+              <div className="space-y-2">
+                <Label htmlFor="due-date">Due Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dueDate ? format(dueDate, 'PPP') : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={dueDate}
+                      onSelect={setDueDate}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
-                <Select
-                  value={newTask.status}
-                  onValueChange={(value) => setNewTask({ ...newTask, status: value as any })}
-                >
-                  <SelectTrigger id="status">
-                    <SelectValue />
+                <Select value={status} onValueChange={setStatus}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="todo">To Do</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="in-progress">In Progress</SelectItem>
+                    <SelectItem value="done">Done</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+              
               <div className="space-y-2">
                 <Label htmlFor="priority">Priority</Label>
-                <Select
-                  value={newTask.priority}
-                  onValueChange={(value) => setNewTask({ ...newTask, priority: value as any })}
-                >
-                  <SelectTrigger id="priority">
-                    <SelectValue />
+                <Select value={priority} onValueChange={setPriority}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select priority" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="low">Low</SelectItem>
@@ -632,317 +411,150 @@ export default function TasksPage() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Due Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal"
-                  >
-                    <Calendar className="mr-2 h-4 w-4" />
-                    {newTask.due_date ? format(newTask.due_date, 'PPP') : <span>Pick a date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <CalendarComponent
-                    mode="single"
-                    selected={newTask.due_date}
-                    onSelect={(date) => setNewTask({ ...newTask, due_date: date })}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
-            </DialogClose>
-            <Button 
-              onClick={() => addTaskMutation.mutate(newTask)}
-              disabled={!newTask.title.trim() || addTaskMutation.isPending}
-            >
-              {addTaskMutation.isPending ? "Adding..." : "Add Task"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Adding...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Task
+                  </>
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
 
-      {/* Edit Task Dialog */}
-      {currentTask && (
-        <Dialog open={isEditTaskOpen} onOpenChange={setIsEditTaskOpen}>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Edit Task</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-title">Title</Label>
-                <Input
-                  id="edit-title"
-                  value={currentTask.title}
-                  onChange={(e) => setCurrentTask({ ...currentTask, title: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-description">Description</Label>
-                <Textarea
-                  id="edit-description"
-                  value={currentTask.description || ""}
-                  onChange={(e) => setCurrentTask({ ...currentTask, description: e.target.value })}
-                  rows={3}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-project">Project</Label>
-                  <Select
-                    value={currentTask.project_id || ""}
-                    onValueChange={(value) => setCurrentTask({ ...currentTask, project_id: value || null })}
-                  >
-                    <SelectTrigger id="edit-project">
-                      <SelectValue placeholder="Select project" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">No project</SelectItem>
-                      {projects?.map((project) => (
-                        <SelectItem key={project.id} value={project.id}>
-                          {project.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+        {/* Task List */}
+        <div className="md:col-span-2">
+          <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="mb-4">
+              <TabsTrigger value="all">All</TabsTrigger>
+              <TabsTrigger value="pending">Pending</TabsTrigger>
+              <TabsTrigger value="in-progress">In Progress</TabsTrigger>
+              <TabsTrigger value="done">Done</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value={activeTab} className="mt-0">
+              {isLoading ? (
+                <div className="flex justify-center items-center h-64">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-assignee">Assignee</Label>
-                  <Select
-                    value={currentTask.assigned_to || ""}
-                    onValueChange={(value) => setCurrentTask({ ...currentTask, assigned_to: value || null })}
-                  >
-                    <SelectTrigger id="edit-assignee">
-                      <SelectValue placeholder="Select assignee" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">Unassigned</SelectItem>
-                      {users?.map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.full_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              ) : filteredTasks.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-64 text-center">
+                  <div className="bg-muted rounded-full p-3 mb-4">
+                    <CheckCircle2 className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                  <h3 className="font-medium text-lg">No tasks found</h3>
+                  <p className="text-muted-foreground mt-1">
+                    {searchQuery 
+                      ? "Try adjusting your search or filters" 
+                      : "Add a new task to get started"}
+                  </p>
+                  <div className="mt-4 max-w-md text-sm text-muted-foreground">
+                    <p>If you're seeing errors, the tasks database table might not be set up yet.</p>
+                    <p className="mt-1">Please check the TASKS_SETUP.md file for instructions on how to set up the tasks feature.</p>
+                  </div>
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-status">Status</Label>
-                  <Select
-                    value={currentTask.status}
-                    onValueChange={(value) => setCurrentTask({ ...currentTask, status: value as any })}
-                  >
-                    <SelectTrigger id="edit-status">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todo">To Do</SelectItem>
-                      <SelectItem value="in_progress">In Progress</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                    </SelectContent>
-                  </Select>
+              ) : (
+                <div className="space-y-4">
+                  {filteredTasks.map((task) => (
+                    <Card key={task.id} className="overflow-hidden">
+                      <div className={cn(
+                        "h-1",
+                        task.status === 'pending' ? "bg-yellow-500" :
+                        task.status === 'in-progress' ? "bg-blue-500" :
+                        "bg-green-500"
+                      )} />
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleUpdateTaskStatus(
+                                  task.id, 
+                                  task.status === 'done' ? 'pending' : 'done'
+                                )}
+                                className={cn(
+                                  "h-5 w-5 rounded-full border flex items-center justify-center transition-colors",
+                                  task.status === 'done'
+                                    ? "border-green-500 bg-green-500 text-white"
+                                    : "border-gray-300 hover:border-green-500"
+                                )}
+                              >
+                                {task.status === 'done' && (
+                                  <CheckCircle2 className="h-3 w-3" />
+                                )}
+                              </button>
+                              <h3 className={cn(
+                                "font-medium",
+                                task.status === 'done' && "line-through text-muted-foreground"
+                              )}>
+                                {task.title}
+                              </h3>
+                            </div>
+                            {task.description && (
+                              <p className="text-sm text-muted-foreground">
+                                {task.description}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span 
+                              className={cn(
+                                "px-2 py-1 rounded-full text-xs font-medium",
+                                task.priority === 'high' ? "bg-red-100 text-red-700" :
+                                task.priority === 'medium' ? "bg-yellow-100 text-yellow-700" :
+                                "bg-green-100 text-green-700"
+                              )}
+                            >
+                              {task.priority}
+                            </span>
+                            
+                            {task.status !== 'done' && (
+                              <Select 
+                                value={task.status} 
+                                onValueChange={(value) => handleUpdateTaskStatus(task.id, value)}
+                              >
+                                <SelectTrigger className="h-8 w-[130px]">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="pending">Pending</SelectItem>
+                                  <SelectItem value="in-progress">In Progress</SelectItem>
+                                  <SelectItem value="done">Done</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteTask(task.id)}
+                              className="h-8 w-8 text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        {task.due_date && (
+                          <div className="mt-2 flex items-center text-xs text-muted-foreground">
+                            <Clock className="h-3 w-3 mr-1" />
+                            <span>Due: {formatDate(task.due_date)}</span>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-priority">Priority</Label>
-                  <Select
-                    value={currentTask.priority}
-                    onValueChange={(value) => setCurrentTask({ ...currentTask, priority: value as any })}
-                  >
-                    <SelectTrigger id="edit-priority">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Due Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal"
-                    >
-                      <Calendar className="mr-2 h-4 w-4" />
-                      {currentTask.due_date ? formatDate(currentTask.due_date) : <span>No due date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <CalendarComponent
-                      mode="single"
-                      selected={currentTask.due_date ? parseISO(currentTask.due_date) : undefined}
-                      onSelect={(date) => setCurrentTask({ 
-                        ...currentTask, 
-                        due_date: date ? format(date, 'yyyy-MM-dd') : null 
-                      })}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button 
-                variant="destructive" 
-                onClick={() => {
-                  deleteTaskMutation.mutate(currentTask.id);
-                  setIsEditTaskOpen(false);
-                }}
-                disabled={deleteTaskMutation.isPending}
-              >
-                {deleteTaskMutation.isPending ? "Deleting..." : "Delete"}
-              </Button>
-              <DialogClose asChild>
-                <Button variant="outline">Cancel</Button>
-              </DialogClose>
-              <Button 
-                onClick={() => updateTaskMutation.mutate(currentTask)}
-                disabled={!currentTask.title.trim() || updateTaskMutation.isPending}
-              >
-                {updateTaskMutation.isPending ? "Saving..." : "Save Changes"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
+              )}
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
     </div>
   );
-
-  // Helper function to render tasks list
-  function renderTasksList(tasksList: Task[]) {
-    if (isLoading) {
-      return (
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <Card key={i}>
-              <CardContent className="p-4">
-                <div className="flex items-start gap-4">
-                  <Skeleton className="h-6 w-6 rounded-full" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-5 w-3/4" />
-                    <Skeleton className="h-4 w-1/2" />
-                    <div className="flex gap-2 mt-2">
-                      <Skeleton className="h-6 w-16" />
-                      <Skeleton className="h-6 w-24" />
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      );
-    }
-
-    if (error) {
-      return (
-        <Card>
-          <CardContent className="p-6 text-center">
-            <p className="text-red-500 mb-2">Error loading tasks</p>
-            <p className="text-muted-foreground">There was a problem loading your tasks. Please try again later.</p>
-            <Button onClick={() => refetch()} variant="outline" className="mt-4">
-              Retry
-            </Button>
-          </CardContent>
-        </Card>
-      );
-    }
-
-    if (tasksList.length === 0) {
-      return (
-        <Card>
-          <CardContent className="p-6 text-center">
-            <p className="text-muted-foreground">No tasks found</p>
-            <Button onClick={() => setIsAddTaskOpen(true)} className="mt-4">
-              Create a Task
-            </Button>
-          </CardContent>
-        </Card>
-      );
-    }
-
-    return (
-      <div className="space-y-4">
-        {tasksList.map((task) => (
-          <Card key={task.id} className="hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
-              <div className="flex items-start gap-4">
-                <button
-                  onClick={() => handleToggleStatus(task.id, task.status)}
-                  className="mt-1"
-                >
-                  {getStatusIcon(task.status)}
-                </button>
-                <div className="flex-1">
-                  <div className="flex items-start justify-between">
-                    <h3 className="font-medium">{task.title}</h3>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleEditTask(task)}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-red-600"
-                          onClick={() => deleteTaskMutation.mutate(task.id)}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                  {task.description && (
-                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                      {task.description}
-                    </p>
-                  )}
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    <Badge variant="outline" className={getPriorityColor(task.priority)}>
-                      {task.priority} priority
-                    </Badge>
-                    {task.project && (
-                      <Badge variant="outline" className="bg-blue-50 text-blue-800">
-                        {task.project.name}
-                      </Badge>
-                    )}
-                    {task.due_date && (
-                      <Badge variant="outline" className="bg-purple-50 text-purple-800">
-                        Due {formatDate(task.due_date)}
-                      </Badge>
-                    )}
-                    {task.assignee && (
-                      <Badge variant="outline" className="bg-gray-100 text-gray-800">
-                        Assigned to {task.assignee.full_name}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    );
-  }
 }

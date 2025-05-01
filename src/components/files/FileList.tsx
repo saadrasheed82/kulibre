@@ -80,13 +80,13 @@ export function FileList({
                 type={file.type}
                 size={file.size}
                 modifiedAt={new Date(file.updated_at)}
+                view={view}
                 onShare={() => {}}
-                onClick={() => onFileClick(file)}
                 onDownload={() => onFileDownload(file.id, file.path)}
                 onRename={() => onFileRename(file.id)}
                 onMove={() => onFileMove(file.id)}
                 onDelete={() => onFileDelete(file.id)}
-                view={view}
+                onClick={() => onFileClick(file)}
               />
             ))}
           </div>

@@ -24,19 +24,15 @@ export default function Files() {
     { id: null, name: "Home" }
   ]);
   
-  // Preview dialog state
   const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   
-  // Rename dialog state
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [itemToRename, setItemToRename] = useState<{id: string, name: string, type: "file" | "folder"} | null>(null);
   
-  // Delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{id: string, name: string, type: "file" | "folder", path?: string} | null>(null);
   
-  // Move dialog state
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [itemToMove, setItemToMove] = useState<{id: string, name: string, type: "file" | "folder"} | null>(null);
 
@@ -55,7 +51,6 @@ export default function Files() {
     getFileUrl
   } = useFiles(currentFolderId);
 
-  // Filter files and folders based on search query
   const filteredFolders = folders?.filter(folder => 
     folder.name.toLowerCase().includes(searchQuery.toLowerCase())
   ) || [];
@@ -64,77 +59,103 @@ export default function Files() {
     file.name.toLowerCase().includes(searchQuery.toLowerCase())
   ) || [];
 
-  // Handle file and folder operations
   const handleUploadComplete = async (file: File) => {
     try {
-      // The actual upload is handled in the UploadDialog component
-      // This function is called for each file
-      return await uploadFile({ file, parentFolderId: currentFolderId });
+      return await uploadFile({
+        file,
+        parentFolderId: currentFolderId
+      });
     } catch (error) {
       console.error('Upload error:', error);
-      throw error; // Re-throw to let the UploadDialog component handle it
+      throw error;
     }
   };
 
   const handleCreateFolder = async (name: string) => {
     try {
-      return await createFolder({ name, parentFolderId: currentFolderId });
+      return await createFolder({
+        name,
+        parentFolderId: currentFolderId
+      });
     } catch (error) {
       console.error('Create folder error:', error);
-      throw error; // Re-throw to let the CreateFolderDialog component handle it
+      throw error;
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async () => {
     if (!itemToDelete) return;
 
-    if (itemToDelete.type === 'file') {
-      await deleteFile({ fileId: id, filePath: itemToDelete.path || '' });
-    } else {
-      await deleteFolder(id);
+    try {
+      if (itemToDelete.type === 'file') {
+        await deleteFile({
+          fileId: itemToDelete.id,
+          filePath: itemToDelete.path || ''
+        });
+      } else {
+        await deleteFolder(itemToDelete.id);
+      }
+      setItemToDelete(null);
+      setDeleteDialogOpen(false);
+    } catch (error) {
+      console.error('Delete error:', error);
+      throw error;
     }
-    setItemToDelete(null);
-    setDeleteDialogOpen(false);
   };
 
-  const handleRename = async (id: string, newName: string) => {
+  const handleRename = async (newName: string) => {
     if (!itemToRename) return;
 
-    if (itemToRename.type === 'file') {
-      await renameFile({ fileId: id, newName });
-    } else {
-      await renameFolder({ folderId: id, newName });
+    try {
+      if (itemToRename.type === 'file') {
+        await renameFile({
+          fileId: itemToRename.id,
+          newName
+        });
+      } else {
+        await renameFolder({
+          folderId: itemToRename.id,
+          newName
+        });
+      }
+      setItemToRename(null);
+      setRenameDialogOpen(false);
+    } catch (error) {
+      console.error('Rename error:', error);
+      throw error;
     }
-    setItemToRename(null);
-    setRenameDialogOpen(false);
   };
 
-  const handleMove = async (id: string, destinationFolderId: string | null) => {
+  const handleMove = async (destinationFolderId: string | null) => {
     if (!itemToMove) return;
 
     try {
       if (itemToMove.type === 'file') {
-        await moveFile({ fileId: id, newFolderId: destinationFolderId });
+        await moveFile({
+          fileId: itemToMove.id,
+          newFolderId: destinationFolderId
+        });
       } else {
-        await moveFolder({ folderId: id, newParentFolderId: destinationFolderId });
+        await moveFolder({
+          folderId: itemToMove.id,
+          newParentFolderId: destinationFolderId
+        });
       }
       setItemToMove(null);
       setMoveDialogOpen(false);
     } catch (error) {
       console.error('Move error:', error);
+      throw error;
     }
   };
 
-  // Navigate to a folder
   const navigateToFolder = (folderId: string, folderName: string) => {
     setCurrentFolderId(folderId);
     setBreadcrumbs(prev => [...prev, { id: folderId, name: folderName }]);
   };
 
-  // Navigate using breadcrumbs
-  const navigateToBreadcrumb = (folderId: string, index: number) => {
-    // Handle "root" or "home" navigation
-    if (folderId === "root" || index === 0) {
+  const navigateToBreadcrumb = (index: number) => {
+    if (index === 0) {
       setCurrentFolderId(null);
       setBreadcrumbs([{ id: null, name: "Home" }]);
       return;
@@ -154,7 +175,7 @@ export default function Files() {
 
       <BreadcrumbNav 
         folderPath={breadcrumbs.slice(1)}
-        onNavigate={(folderId, index) => navigateToBreadcrumb(folderId, index)}
+        onNavigate={(_, index) => navigateToBreadcrumb(index)}
       />
 
       <div className="flex flex-col sm:flex-row gap-3">

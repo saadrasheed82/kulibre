@@ -52,7 +52,7 @@ export function NewProjectModal({ trigger, onProjectCreated }: NewProjectModalPr
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name.trim()) {
       toast({
         title: "Error",
@@ -63,11 +63,11 @@ export function NewProjectModal({ trigger, onProjectCreated }: NewProjectModalPr
     }
 
     setIsSubmitting(true);
-    
+
     try {
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
         throw new Error("You must be logged in to create a project");
       }
@@ -81,7 +81,7 @@ export function NewProjectModal({ trigger, onProjectCreated }: NewProjectModalPr
         due_date: formData.due_date || null,
         created_by: user.id
       });
-      
+
       // Insert project
       const { data, error } = await supabase
         .from("projects")
@@ -115,7 +115,6 @@ export function NewProjectModal({ trigger, onProjectCreated }: NewProjectModalPr
           console.error("Error adding user as project member:", memberError);
         }
       }
-
       toast({
         title: "Project created",
         description: "Your new project has been created successfully.",
@@ -146,7 +145,6 @@ export function NewProjectModal({ trigger, onProjectCreated }: NewProjectModalPr
       setIsSubmitting(false);
     }
   };
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>

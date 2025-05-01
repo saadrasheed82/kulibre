@@ -9,6 +9,52 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      user_tasks: {
+        Row: {
+          id: string
+          title: string
+          description: string | null
+          status: string
+          priority: string
+          due_date: string | null
+          completed_at: string | null
+          user_id: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          description?: string | null
+          status?: string
+          priority?: string
+          due_date?: string | null
+          completed_at?: string | null
+          user_id: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          description?: string | null
+          status?: string
+          priority?: string
+          due_date?: string | null
+          completed_at?: string | null
+          user_id?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_tasks_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       calendar_events: {
         Row: {
           id: string
@@ -393,6 +439,58 @@ export interface Database {
           {
             foreignKeyName: "projects_created_by_fkey"
             columns: ["created_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      team: {
+        Row: {
+          id: string
+          name: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      user_team: {
+        Row: {
+          id: string
+          team_id: string
+          user_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          team_id: string
+          user_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          team_id?: string
+          user_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_team_team_id_fkey"
+            columns: ["team_id"]
+            referencedRelation: "team"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_team_user_id_fkey"
+            columns: ["user_id"]
             referencedRelation: "users"
             referencedColumns: ["id"]
           }
