@@ -30,7 +30,7 @@ import { cn } from "@/lib/utils"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { format } from "date-fns"
 import { CalendarIcon, Clock } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
 import { useQuery } from "@tanstack/react-query";
@@ -58,11 +58,22 @@ interface NewEventModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onEventCreated?: () => void;
+  onEventUpdated?: () => void;
+  event?: any; // The event to edit, if in edit mode
+  isEditing?: boolean;
 }
 
-export function NewEventModal({ open, onOpenChange, onEventCreated }: NewEventModalProps) {
+export function NewEventModal({
+  open,
+  onOpenChange,
+  onEventCreated,
+  onEventUpdated,
+  event,
+  isEditing = false
+}: NewEventModalProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [modalTitle, setModalTitle] = useState("Add New Event");
 
   // Fetch projects for the dropdown
   const { data: projects } = useQuery({
@@ -73,7 +84,7 @@ export function NewEventModal({ open, onOpenChange, onEventCreated }: NewEventMo
           .from('projects')
           .select('id, name')
           .order('name');
-          
+
         if (error) throw error;
         return data || [];
       } catch (error) {
@@ -93,7 +104,7 @@ export function NewEventModal({ open, onOpenChange, onEventCreated }: NewEventMo
           .from('profiles')
           .select('id, full_name')
           .order('full_name');
-          
+
         if (error) throw error;
         return data || [];
       } catch (error) {
@@ -104,9 +115,21 @@ export function NewEventModal({ open, onOpenChange, onEventCreated }: NewEventMo
     enabled: open, // Only fetch when modal is open
   });
 
+  // Set up form with default values or event data if editing
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
-    defaultValues: {
+    defaultValues: isEditing && event ? {
+      title: event.title || "",
+      eventType: event.event_type || "task",
+      projectId: event.project_id || "",
+      startDate: event.start_date ? new Date(event.start_date) : new Date(),
+      startTime: event.start_date && !event.all_day ? format(new Date(event.start_date), "HH:mm") : "09:00",
+      endDate: event.end_date ? new Date(event.end_date) : undefined,
+      endTime: event.end_date && !event.all_day ? format(new Date(event.end_date), "HH:mm") : "10:00",
+      allDay: event.all_day || false,
+      assignedMembers: event.attendees ? event.attendees.map((a: any) => a.user_id) : [],
+      description: event.description || "",
+    } : {
       title: "",
       eventType: "task",
       projectId: "",
@@ -120,17 +143,22 @@ export function NewEventModal({ open, onOpenChange, onEventCreated }: NewEventMo
     },
   });
 
+  // Update modal title based on whether we're editing or creating
+  useEffect(() => {
+    setModalTitle(isEditing ? "Edit Event" : "Add New Event");
+  }, [isEditing]);
+
   const watchAllDay = form.watch("allDay");
 
   async function onSubmit(values: z.infer<typeof FormSchema>) {
     setIsSubmitting(true);
-    
+
     try {
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
-        throw new Error("You must be logged in to create an event");
+        throw new Error("You must be logged in to create or update an event");
       }
 
       // Format start date with time if not all day
@@ -147,61 +175,123 @@ export function NewEventModal({ open, onOpenChange, onEventCreated }: NewEventMo
         endDateTime.setHours(hours, minutes);
       }
 
-      // Insert event
-      const { data: eventData, error: eventError } = await supabase
-        .from('calendar_events')
-        .insert([{
-          title: values.title,
-          description: values.description,
-          event_type: values.eventType,
-          start_date: startDateTime.toISOString(),
-          end_date: endDateTime ? endDateTime.toISOString() : null,
-          all_day: values.allDay,
-          project_id: values.projectId || null,
-          created_by: user.id,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }])
-        .select();
+      if (isEditing && event?.id) {
+        // Update existing event
+        const { error: eventError } = await supabase
+          .from('calendar_events')
+          .update({
+            title: values.title,
+            description: values.description,
+            event_type: values.eventType,
+            start_date: startDateTime.toISOString(),
+            end_date: endDateTime ? endDateTime.toISOString() : null,
+            all_day: values.allDay,
+            project_id: values.projectId || null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', event.id);
 
-      if (eventError) throw eventError;
+        if (eventError) throw eventError;
 
-      // Add attendees if any are selected
-      if (values.assignedMembers.length > 0 && eventData && eventData[0]) {
-        const attendeesData = values.assignedMembers.map(memberId => ({
-          event_id: eventData[0].id,
-          user_id: memberId,
-          role: 'attendee',
-          response: 'pending'
-        }));
+        // Handle attendees for the updated event
+        if (values.assignedMembers.length > 0) {
+          // First, delete existing attendees
+          const { error: deleteError } = await supabase
+            .from('event_attendees')
+            .delete()
+            .eq('event_id', event.id);
 
-        const { error: attendeesError } = await supabase
-          .from('event_attendees')
-          .insert(attendeesData);
+          if (deleteError) {
+            console.error("Error deleting existing attendees:", deleteError);
+          }
 
-        if (attendeesError) {
-          console.error("Error adding attendees:", attendeesError);
+          // Then add the new attendees
+          const attendeesData = values.assignedMembers.map(memberId => ({
+            event_id: event.id,
+            user_id: memberId,
+            role: 'attendee',
+            response: 'pending'
+          }));
+
+          const { error: attendeesError } = await supabase
+            .from('event_attendees')
+            .insert(attendeesData);
+
+          if (attendeesError) {
+            console.error("Error updating attendees:", attendeesError);
+          }
+        }
+
+        toast({
+          title: "Event updated",
+          description: "Your event has been updated successfully.",
+        });
+
+        // Reset form and close modal
+        form.reset();
+        onOpenChange(false);
+
+        // Call callback if provided
+        if (onEventUpdated) {
+          onEventUpdated();
+        }
+      } else {
+        // Insert new event
+        const { data: eventData, error: eventError } = await supabase
+          .from('calendar_events')
+          .insert([{
+            title: values.title,
+            description: values.description,
+            event_type: values.eventType,
+            start_date: startDateTime.toISOString(),
+            end_date: endDateTime ? endDateTime.toISOString() : null,
+            all_day: values.allDay,
+            project_id: values.projectId || null,
+            created_by: user.id,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }])
+          .select();
+
+        if (eventError) throw eventError;
+
+        // Add attendees if any are selected
+        if (values.assignedMembers.length > 0 && eventData && eventData[0]) {
+          const attendeesData = values.assignedMembers.map(memberId => ({
+            event_id: eventData[0].id,
+            user_id: memberId,
+            role: 'attendee',
+            response: 'pending'
+          }));
+
+          const { error: attendeesError } = await supabase
+            .from('event_attendees')
+            .insert(attendeesData);
+
+          if (attendeesError) {
+            console.error("Error adding attendees:", attendeesError);
+          }
+        }
+
+        toast({
+          title: "Event created",
+          description: "Your event has been added to the calendar.",
+        });
+
+        // Reset form and close modal
+        form.reset();
+        onOpenChange(false);
+
+        // Call callback if provided
+        if (onEventCreated) {
+          onEventCreated();
         }
       }
-
-      toast({
-        title: "Event created",
-        description: "Your event has been added to the calendar.",
-      });
-
-      // Reset form and close modal
-      form.reset();
-      onOpenChange(false);
-      
-      // Call callback if provided
-      if (onEventCreated) {
-        onEventCreated();
-      }
     } catch (error: any) {
-      console.error("Error creating event:", error);
+      console.error(`Error ${isEditing ? 'updating' : 'creating'} event:`, error);
       toast({
-        title: "Error creating event",
-        description: error.message || "Failed to create event. Please try again.",
+        title: `Error ${isEditing ? 'updating' : 'creating'} event`,
+        description: error.message || `Failed to ${isEditing ? 'update' : 'create'} event. Please try again.`,
         variant: "destructive",
       });
     } finally {
@@ -213,9 +303,11 @@ export function NewEventModal({ open, onOpenChange, onEventCreated }: NewEventMo
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent className="max-w-[500px]">
         <AlertDialogHeader>
-          <AlertDialogTitle>Add New Event</AlertDialogTitle>
+          <AlertDialogTitle>{modalTitle}</AlertDialogTitle>
           <AlertDialogDescription>
-            Create a new event to add to your calendar.
+            {isEditing
+              ? "Update the details of your calendar event."
+              : "Create a new event to add to your calendar."}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <Form {...form}>
@@ -256,7 +348,7 @@ export function NewEventModal({ open, onOpenChange, onEventCreated }: NewEventMo
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="projectId"
@@ -282,7 +374,7 @@ export function NewEventModal({ open, onOpenChange, onEventCreated }: NewEventMo
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="allDay"
@@ -303,7 +395,7 @@ export function NewEventModal({ open, onOpenChange, onEventCreated }: NewEventMo
                 </FormItem>
               )}
             />
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -343,7 +435,7 @@ export function NewEventModal({ open, onOpenChange, onEventCreated }: NewEventMo
                   </FormItem>
                 )}
               />
-              
+
               {!watchAllDay && (
                 <FormField
                   control={form.control}
@@ -363,7 +455,7 @@ export function NewEventModal({ open, onOpenChange, onEventCreated }: NewEventMo
                 />
               )}
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -396,7 +488,7 @@ export function NewEventModal({ open, onOpenChange, onEventCreated }: NewEventMo
                           selected={field.value}
                           onSelect={field.onChange}
                           initialFocus
-                          disabled={(date) => 
+                          disabled={(date) =>
                             date < form.getValues("startDate")
                           }
                         />
@@ -406,7 +498,7 @@ export function NewEventModal({ open, onOpenChange, onEventCreated }: NewEventMo
                   </FormItem>
                 )}
               />
-              
+
               {!watchAllDay && (
                 <FormField
                   control={form.control}
@@ -426,7 +518,7 @@ export function NewEventModal({ open, onOpenChange, onEventCreated }: NewEventMo
                 />
               )}
             </div>
-            
+
             <FormField
               control={form.control}
               name="assignedMembers"
@@ -446,16 +538,16 @@ export function NewEventModal({ open, onOpenChange, onEventCreated }: NewEventMo
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder={
-                          field.value.length > 0 
-                            ? `${field.value.length} attendee(s) selected` 
+                          field.value.length > 0
+                            ? `${field.value.length} attendee(s) selected`
                             : "Select attendees"
                         } />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       {teamMembers?.map(member => (
-                        <SelectItem 
-                          key={member.id} 
+                        <SelectItem
+                          key={member.id}
                           value={member.id}
                           className={cn(
                             field.value.includes(member.id) && "bg-primary/10"
@@ -467,7 +559,7 @@ export function NewEventModal({ open, onOpenChange, onEventCreated }: NewEventMo
                     </SelectContent>
                   </Select>
                   <FormDescription>
-                    Selected: {field.value.length > 0 
+                    Selected: {field.value.length > 0
                       ? teamMembers
                           ?.filter(m => field.value.includes(m.id))
                           .map(m => m.full_name)
@@ -478,7 +570,7 @@ export function NewEventModal({ open, onOpenChange, onEventCreated }: NewEventMo
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="description"
@@ -501,8 +593,8 @@ export function NewEventModal({ open, onOpenChange, onEventCreated }: NewEventMo
             />
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction 
-                type="submit" 
+              <AlertDialogAction
+                type="submit"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? "Saving..." : "Save"}

@@ -9,15 +9,9 @@ import { Layout } from "./components/layout/Layout";
 import Index from "./pages/Index";
 import ProjectsPageSimple from "./pages/ProjectsPageSimple";
 import ProjectDetailsPage from "./pages/ProjectDetailsPage";
-// import Calendar from "./pages/Calendar";
-// import Calendar from "./pages/CalendarSimple";
-// import Calendar from "./pages/CalendarMinimal";
-// import Calendar from "./pages/CalendarStep1";
-// import Calendar from "./pages/CalendarStep2";
-import Calendar from "./pages/CalendarStep3";
+import Calendar from "./pages/Calendar";
 import TasksPage from "./pages/TasksPage";
 import Files from "./pages/Files";
-import Team from "./pages/Team";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
@@ -78,7 +72,6 @@ export default function App() {
             <Route path="/tasks" element={<Layout><TasksPage /></Layout>} />
             <Route path="/calendar" element={<Layout><Calendar /></Layout>} />
             <Route path="/files" element={<Layout><Files /></Layout>} />
-            <Route path="/team" element={<Layout><Team /></Layout>} />
             <Route path="/settings" element={<Layout><Settings /></Layout>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

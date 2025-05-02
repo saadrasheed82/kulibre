@@ -511,6 +511,40 @@ export interface Database {
           }
         ]
       }
+      user_tasks: {
+        Row: {
+          id: string
+          user_id: string
+          task_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          task_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          task_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_tasks_task_id_fkey"
+            columns: ["task_id"]
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_tasks_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       team_invitations: {
         Row: {
           id: string

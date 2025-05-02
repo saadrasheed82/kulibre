@@ -3,14 +3,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO } from "date-fns";
-import { 
-  CheckCircle2, 
-  Circle, 
-  Clock, 
-  Filter, 
-  Plus, 
-  Search, 
-  SlidersHorizontal,
+import {
+  CheckCircle2,
+  Circle,
+  Filter,
+  Plus,
+  Search,
   Calendar,
   Trash2,
   Edit,
@@ -18,7 +16,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -53,15 +51,16 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 interface Task {
   id: string;
   title: string;
-  description: string | null;
   project_id: string | null;
-  status: "todo" | "in_progress" | "completed";
-  priority: "low" | "medium" | "high";
-  assigned_to: string | null;
   due_date: string | null;
   completed_at: string | null;
   created_at: string;
-  updated_at: string;
+  // These fields are not in the database but used in the UI
+  description?: string | null;
+  status?: "todo" | "in_progress" | "completed";
+  priority?: "low" | "medium" | "high";
+  assigned_to?: string | null;
+  updated_at?: string;
   project?: {
     id: string;
     name: string;
@@ -71,6 +70,7 @@ interface Task {
     full_name: string;
     avatar_url: string | null;
   };
+  assigned_users?: User[];
 }
 
 // Define Project type for dropdown
@@ -100,10 +100,11 @@ export default function TasksPage() {
   const [newTask, setNewTask] = useState({
     title: "",
     description: "",
-    project_id: "",
+    project_id: "none",
     status: "todo",
     priority: "medium",
-    assigned_to: "",
+    assigned_to: "none",
+    assigned_users: [] as string[],
     due_date: null as Date | null
   });
 
@@ -114,30 +115,30 @@ export default function TasksPage() {
       let query = supabase
         .from('tasks')
         .select(`
-          *,
-          project:project_id (id, name),
-          assignee:assigned_to (id, full_name, avatar_url)
+          id,
+          title,
+          project_id,
+          due_date,
+          completed_at,
+          created_at,
+          project:project_id (id, name)
         `);
 
       // Apply filters
       if (searchQuery) {
         query = query.ilike('title', `%${searchQuery}%`);
       }
-      
+
       if (statusFilter) {
-        query = query.eq('status', statusFilter);
+        if (statusFilter === 'completed') {
+          query = query.not('completed_at', 'is', null);
+        } else {
+          query = query.is('completed_at', null);
+        }
       }
-      
-      if (priorityFilter) {
-        query = query.eq('priority', priorityFilter);
-      }
-      
-      if (projectFilter) {
+
+      if (projectFilter && projectFilter !== "all") {
         query = query.eq('project_id', projectFilter);
-      }
-      
-      if (assigneeFilter) {
-        query = query.eq('assigned_to', assigneeFilter);
       }
 
       const { data, error } = await query.order('due_date', { ascending: true });
@@ -147,7 +148,75 @@ export default function TasksPage() {
         throw error;
       }
 
-      return data as Task[];
+      // Fetch all user assignments in a single query
+      const { data: allUserTasks, error: userTasksError } = await supabase
+        .from('user_tasks')
+        .select(`
+          task_id,
+          user_id
+        `)
+        .in('task_id', (data as Task[]).map(task => task.id));
+
+      if (userTasksError) {
+        console.error("Error fetching user tasks:", userTasksError);
+      }
+
+      // Get all unique user IDs
+      const userIds = [...new Set(allUserTasks?.map(ut => ut.user_id) || [])];
+
+      // Fetch user details
+      const { data: userDetails, error: userError } = await supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url')
+        .in('id', userIds);
+
+      if (userError) {
+        console.error("Error fetching user details:", userError);
+      }
+
+      // Create a map of user IDs to user objects
+      const userMap: Record<string, User> = {};
+      userDetails?.forEach(user => {
+        userMap[user.id] = user;
+      });
+
+      // Group user assignments by task
+      const userTasksByTaskId: Record<string, User[]> = {};
+      allUserTasks?.forEach(ut => {
+        if (!userTasksByTaskId[ut.task_id]) {
+          userTasksByTaskId[ut.task_id] = [];
+        }
+        const user = userMap[ut.user_id];
+        if (user) {
+          userTasksByTaskId[ut.task_id].push(user);
+        }
+      });
+
+      // Add user assignments to tasks and default values for UI
+      let tasksWithAssignments = (data as Task[]).map(task => ({
+        ...task,
+        assigned_users: userTasksByTaskId[task.id] || [],
+        status: task.completed_at ? 'completed' : 'todo',
+        priority: 'medium' // Default priority since it's not in the database
+      }));
+
+      // Apply client-side filters
+
+      // Filter by assignee if needed
+      if (assigneeFilter && assigneeFilter !== "all") {
+        tasksWithAssignments = tasksWithAssignments.filter(task =>
+          task.assigned_users?.some(user => user.id === assigneeFilter)
+        );
+      }
+
+      // Filter by priority if needed
+      if (priorityFilter && priorityFilter !== "all") {
+        tasksWithAssignments = tasksWithAssignments.filter(task =>
+          task.priority === priorityFilter
+        );
+      }
+
+      return tasksWithAssignments as Task[];
     }
   });
 
@@ -190,52 +259,96 @@ export default function TasksPage() {
   // Add task mutation
   const addTaskMutation = useMutation({
     mutationFn: async (task: typeof newTask) => {
-      const { data, error } = await supabase
-        .from('tasks')
-        .insert([{
-          title: task.title,
-          description: task.description,
-          project_id: task.project_id || null,
-          status: task.status,
-          priority: task.priority,
-          assigned_to: task.assigned_to || null,
-          due_date: task.due_date ? format(task.due_date, 'yyyy-MM-dd') : null
-        }])
-        .select();
+      try {
+        console.log("Starting task creation with:", task);
 
-      if (error) throw error;
-      return data;
+        // First, insert the task
+        const { data, error } = await supabase
+          .from('tasks')
+          .insert([{
+            title: task.title,
+            project_id: task.project_id && task.project_id !== "none" ? task.project_id : null,
+            due_date: task.due_date ? format(task.due_date, 'yyyy-MM-dd') : null,
+            completed_at: null
+          }])
+          .select();
+
+        if (error) {
+          console.error("Error inserting task:", error);
+          throw error;
+        }
+
+        console.log("Task created successfully:", data);
+
+        // If we have assigned users, create user_task entries
+        if (task.assigned_users.length > 0 && data && data[0]) {
+          const taskId = data[0].id;
+          console.log("Adding user assignments for task:", taskId);
+
+          // Create user task entries one by one to avoid potential issues
+          for (const userId of task.assigned_users) {
+            console.log("Adding assignment for user:", userId);
+            const { error: userTaskError } = await supabase
+              .from('user_tasks')
+              .insert({
+                user_id: userId,
+                task_id: taskId
+              });
+
+            if (userTaskError) {
+              console.error(`Error adding user task assignment for user ${userId}:`, userTaskError);
+              // Continue with other assignments even if one fails
+            }
+          }
+        }
+
+        return data;
+      } catch (error) {
+        console.error("Unexpected error in task creation:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      toast({
-        title: "Task added",
-        description: "The task has been added successfully.",
-      });
-      setIsAddTaskOpen(false);
-      resetNewTaskForm();
+      try {
+        console.log("Task added successfully, invalidating queries");
+        queryClient.invalidateQueries({ queryKey: ['tasks'] });
+
+        console.log("Showing success toast");
+        toast({
+          title: "Task added",
+          description: "The task has been added successfully.",
+        });
+
+        console.log("Closing dialog and resetting form");
+        setIsAddTaskOpen(false);
+        resetNewTaskForm();
+      } catch (error) {
+        console.error("Error in onSuccess handler:", error);
+      }
     },
     onError: (error: any) => {
-      toast({
-        title: "Error adding task",
-        description: error.message,
-        variant: "destructive",
-      });
+      try {
+        console.error("Error in task mutation:", error);
+        toast({
+          title: "Error adding task",
+          description: error.message || "An unknown error occurred",
+          variant: "destructive",
+        });
+      } catch (toastError) {
+        console.error("Error showing error toast:", toastError);
+      }
     }
   });
 
   // Update task mutation
   const updateTaskMutation = useMutation({
     mutationFn: async (task: Task) => {
+      // First, update the task
       const { data, error } = await supabase
         .from('tasks')
         .update({
           title: task.title,
-          description: task.description,
-          project_id: task.project_id || null,
-          status: task.status,
-          priority: task.priority,
-          assigned_to: task.assigned_to || null,
+          project_id: task.project_id && task.project_id !== "none" ? task.project_id : null,
           due_date: task.due_date,
           completed_at: task.status === 'completed' ? new Date().toISOString() : null
         })
@@ -243,6 +356,36 @@ export default function TasksPage() {
         .select();
 
       if (error) throw error;
+
+      // Always delete existing assignments first
+      const { error: deleteError } = await supabase
+        .from('user_tasks')
+        .delete()
+        .eq('task_id', task.id);
+
+      if (deleteError) {
+        console.error("Error deleting existing user task assignments:", deleteError);
+        // Continue even if delete fails
+      }
+
+      // If we have assigned users, create new assignments
+      if (task.assigned_users && task.assigned_users.length > 0) {
+        // Create user task entries one by one to avoid potential issues
+        for (const user of task.assigned_users) {
+          const { error: insertError } = await supabase
+            .from('user_tasks')
+            .insert({
+              user_id: user.id,
+              task_id: task.id
+            });
+
+          if (insertError) {
+            console.error(`Error adding user task assignment for user ${user.id}:`, insertError);
+            // Continue with other assignments even if one fails
+          }
+        }
+      }
+
       return data;
     },
     onSuccess: () => {
@@ -266,6 +409,18 @@ export default function TasksPage() {
   // Delete task mutation
   const deleteTaskMutation = useMutation({
     mutationFn: async (taskId: string) => {
+      // First delete user task assignments
+      const { error: userTaskError } = await supabase
+        .from('user_tasks')
+        .delete()
+        .eq('task_id', taskId);
+
+      if (userTaskError) {
+        console.error("Error deleting user task assignments:", userTaskError);
+        // Continue with task deletion even if user_tasks deletion fails
+      }
+
+      // Then delete the task
       const { error } = await supabase
         .from('tasks')
         .delete()
@@ -295,7 +450,6 @@ export default function TasksPage() {
       const { error } = await supabase
         .from('tasks')
         .update({
-          status: newStatus,
           completed_at: newStatus === 'completed' ? new Date().toISOString() : null
         })
         .eq('id', taskId);
@@ -319,24 +473,30 @@ export default function TasksPage() {
     setNewTask({
       title: "",
       description: "",
-      project_id: "",
+      project_id: "none",
       status: "todo",
       priority: "medium",
-      assigned_to: "",
+      assigned_to: "none",
+      assigned_users: [],
       due_date: null
     });
   };
 
   // Handle edit task
   const handleEditTask = (task: Task) => {
-    setCurrentTask(task);
+    // Make sure we have the assigned_users array
+    const taskWithUsers = {
+      ...task,
+      assigned_users: task.assigned_users || []
+    };
+    setCurrentTask(taskWithUsers);
     setIsEditTaskOpen(true);
   };
 
   // Handle task status toggle
-  const handleToggleStatus = (taskId: string, currentStatus: string) => {
-    const newStatus = currentStatus === 'completed' ? 'todo' : 'completed';
-    toggleTaskStatusMutation.mutate({ taskId, newStatus });
+  const handleToggleStatus = (task: Task) => {
+    const newStatus = task.completed_at ? 'todo' : 'completed';
+    toggleTaskStatusMutation.mutate({ taskId: task.id, newStatus });
   };
 
   // Format date for display
@@ -362,21 +522,17 @@ export default function TasksPage() {
   };
 
   // Get status icon
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle2 className="h-5 w-5 text-green-500" />;
-      case 'in_progress':
-        return <Clock className="h-5 w-5 text-blue-500" />;
-      default:
-        return <Circle className="h-5 w-5 text-gray-400" />;
+  const getStatusIcon = (task: Task) => {
+    if (task.completed_at) {
+      return <CheckCircle2 className="h-5 w-5 text-green-500" />;
+    } else {
+      return <Circle className="h-5 w-5 text-gray-400" />;
     }
   };
 
   // Filter tasks by status for tabs
-  const todoTasks = tasks?.filter(task => task.status === 'todo') || [];
-  const inProgressTasks = tasks?.filter(task => task.status === 'in_progress') || [];
-  const completedTasks = tasks?.filter(task => task.status === 'completed') || [];
+  const completedTasks = tasks?.filter(task => task.completed_at !== null) || [];
+  const todoTasks = tasks?.filter(task => task.completed_at === null) || [];
 
   return (
     <div className="space-y-8">
@@ -410,16 +566,15 @@ export default function TasksPage() {
                 <div className="space-y-2">
                   <Label>Status</Label>
                   <Select
-                    value={statusFilter || ""}
-                    onValueChange={(value) => setStatusFilter(value || null)}
+                    value={statusFilter || "all"}
+                    onValueChange={(value) => setStatusFilter(value === "all" ? null : value)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="All statuses" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All statuses</SelectItem>
+                      <SelectItem value="all">All statuses</SelectItem>
                       <SelectItem value="todo">To Do</SelectItem>
-                      <SelectItem value="in_progress">In Progress</SelectItem>
                       <SelectItem value="completed">Completed</SelectItem>
                     </SelectContent>
                   </Select>
@@ -428,14 +583,14 @@ export default function TasksPage() {
                 <div className="space-y-2">
                   <Label>Priority</Label>
                   <Select
-                    value={priorityFilter || ""}
-                    onValueChange={(value) => setPriorityFilter(value || null)}
+                    value={priorityFilter || "all"}
+                    onValueChange={(value) => setPriorityFilter(value === "all" ? null : value)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="All priorities" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All priorities</SelectItem>
+                      <SelectItem value="all">All priorities</SelectItem>
                       <SelectItem value="low">Low</SelectItem>
                       <SelectItem value="medium">Medium</SelectItem>
                       <SelectItem value="high">High</SelectItem>
@@ -446,14 +601,14 @@ export default function TasksPage() {
                 <div className="space-y-2">
                   <Label>Project</Label>
                   <Select
-                    value={projectFilter || ""}
-                    onValueChange={(value) => setProjectFilter(value || null)}
+                    value={projectFilter || "all"}
+                    onValueChange={(value) => setProjectFilter(value === "all" ? null : value)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="All projects" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All projects</SelectItem>
+                      <SelectItem value="all">All projects</SelectItem>
                       {projects?.map((project) => (
                         <SelectItem key={project.id} value={project.id}>
                           {project.name}
@@ -466,14 +621,14 @@ export default function TasksPage() {
                 <div className="space-y-2">
                   <Label>Assignee</Label>
                   <Select
-                    value={assigneeFilter || ""}
-                    onValueChange={(value) => setAssigneeFilter(value || null)}
+                    value={assigneeFilter || "all"}
+                    onValueChange={(value) => setAssigneeFilter(value === "all" ? null : value)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="All assignees" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All assignees</SelectItem>
+                      <SelectItem value="all">All assignees</SelectItem>
                       {users?.map((user) => (
                         <SelectItem key={user.id} value={user.id}>
                           {user.full_name}
@@ -487,10 +642,10 @@ export default function TasksPage() {
                   <Button
                     variant="outline"
                     onClick={() => {
-                      setStatusFilter(null);
-                      setPriorityFilter(null);
-                      setProjectFilter(null);
-                      setAssigneeFilter(null);
+                      setStatusFilter("all");
+                      setPriorityFilter("all");
+                      setProjectFilter("all");
+                      setAssigneeFilter("all");
                     }}
                   >
                     Reset
@@ -501,7 +656,10 @@ export default function TasksPage() {
             </PopoverContent>
           </Popover>
 
-          <Button onClick={() => setIsAddTaskOpen(true)}>
+          <Button onClick={() => {
+            console.log("Add Task button clicked");
+            setIsAddTaskOpen(true);
+          }}>
             <Plus className="h-4 w-4 mr-2" />
             Add Task
           </Button>
@@ -509,10 +667,9 @@ export default function TasksPage() {
       </div>
 
       <Tabs defaultValue="all" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="all">All</TabsTrigger>
           <TabsTrigger value="todo">To Do</TabsTrigger>
-          <TabsTrigger value="in_progress">In Progress</TabsTrigger>
           <TabsTrigger value="completed">Completed</TabsTrigger>
         </TabsList>
 
@@ -524,23 +681,23 @@ export default function TasksPage() {
           {renderTasksList(todoTasks)}
         </TabsContent>
 
-        <TabsContent value="in_progress" className="mt-6">
-          {renderTasksList(inProgressTasks)}
-        </TabsContent>
-
         <TabsContent value="completed" className="mt-6">
           {renderTasksList(completedTasks)}
         </TabsContent>
       </Tabs>
 
       {/* Add Task Dialog */}
-      <Dialog open={isAddTaskOpen} onOpenChange={setIsAddTaskOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+      {isAddTaskOpen && (
+        <Dialog open={true} onOpenChange={(open) => {
+          console.log("Dialog open state changing to:", open);
+          setIsAddTaskOpen(open);
+        }}>
+          <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Add New Task</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
+          <div className="space-y-3 py-2">
+            <div className="space-y-1">
               <Label htmlFor="title">Title</Label>
               <Input
                 id="title"
@@ -549,28 +706,28 @@ export default function TasksPage() {
                 placeholder="Task title"
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1">
               <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"
                 value={newTask.description}
                 onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
                 placeholder="Task description"
-                rows={3}
+                rows={2}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
                 <Label htmlFor="project">Project</Label>
                 <Select
-                  value={newTask.project_id}
-                  onValueChange={(value) => setNewTask({ ...newTask, project_id: value })}
+                  value={newTask.project_id || "none"}
+                  onValueChange={(value) => setNewTask({ ...newTask, project_id: value === "none" ? "" : value })}
                 >
-                  <SelectTrigger id="project">
+                  <SelectTrigger id="project" className="h-8">
                     <SelectValue placeholder="Select project" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No project</SelectItem>
+                    <SelectItem value="none">No project</SelectItem>
                     {projects?.map((project) => (
                       <SelectItem key={project.id} value={project.id}>
                         {project.name}
@@ -579,17 +736,17 @@ export default function TasksPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="assignee">Assignee</Label>
+              <div className="space-y-1">
+                <Label htmlFor="assignee">Primary Assignee</Label>
                 <Select
-                  value={newTask.assigned_to}
-                  onValueChange={(value) => setNewTask({ ...newTask, assigned_to: value })}
+                  value={newTask.assigned_to || "none"}
+                  onValueChange={(value) => setNewTask({ ...newTask, assigned_to: value === "none" ? "" : value })}
                 >
-                  <SelectTrigger id="assignee">
+                  <SelectTrigger id="assignee" className="h-8">
                     <SelectValue placeholder="Select assignee" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Unassigned</SelectItem>
+                    <SelectItem value="none">Unassigned</SelectItem>
                     {users?.map((user) => (
                       <SelectItem key={user.id} value={user.id}>
                         {user.full_name}
@@ -598,31 +755,68 @@ export default function TasksPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-1 col-span-2">
+                <Label htmlFor="assigned-users">Additional Team Members</Label>
+                <div className="border rounded-md p-1">
+                  <div className="flex flex-wrap gap-1 max-h-[100px] overflow-y-auto">
+                    {users?.map((user) => (
+                      <div
+                        key={user.id}
+                        className={`px-2 py-0.5 rounded-full text-xs cursor-pointer ${
+                          newTask.assigned_users.includes(user.id)
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-secondary text-secondary-foreground'
+                        }`}
+                        onClick={() => {
+                          const currentValues = [...newTask.assigned_users];
+                          if (currentValues.includes(user.id)) {
+                            setNewTask({
+                              ...newTask,
+                              assigned_users: currentValues.filter(v => v !== user.id)
+                            });
+                          } else {
+                            setNewTask({
+                              ...newTask,
+                              assigned_users: [...currentValues, user.id]
+                            });
+                          }
+                        }}
+                      >
+                        {user.full_name}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {newTask.assigned_users.length > 0 && (
+                  <div className="text-xs text-muted-foreground">
+                    Selected: {newTask.assigned_users.length} team member(s)
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
                 <Label htmlFor="status">Status</Label>
                 <Select
                   value={newTask.status}
                   onValueChange={(value) => setNewTask({ ...newTask, status: value as any })}
                 >
-                  <SelectTrigger id="status">
+                  <SelectTrigger id="status" className="h-8">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todo">To Do</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label htmlFor="priority">Priority</Label>
                 <Select
                   value={newTask.priority}
                   onValueChange={(value) => setNewTask({ ...newTask, priority: value as any })}
                 >
-                  <SelectTrigger id="priority">
+                  <SelectTrigger id="priority" className="h-8">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -633,15 +827,15 @@ export default function TasksPage() {
                 </Select>
               </div>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1">
               <Label>Due Date</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className="w-full justify-start text-left font-normal"
+                    className="w-full justify-start text-left font-normal h-8 text-sm"
                   >
-                    <Calendar className="mr-2 h-4 w-4" />
+                    <Calendar className="mr-2 h-3 w-3" />
                     {newTask.due_date ? format(newTask.due_date, 'PPP') : <span>Pick a date</span>}
                   </Button>
                 </PopoverTrigger>
@@ -660,8 +854,15 @@ export default function TasksPage() {
             <DialogClose asChild>
               <Button variant="outline">Cancel</Button>
             </DialogClose>
-            <Button 
-              onClick={() => addTaskMutation.mutate(newTask)}
+            <Button
+              onClick={() => {
+                try {
+                  console.log("Adding task:", newTask);
+                  addTaskMutation.mutate(newTask);
+                } catch (error) {
+                  console.error("Error in Add Task button click:", error);
+                }
+              }}
               disabled={!newTask.title.trim() || addTaskMutation.isPending}
             >
               {addTaskMutation.isPending ? "Adding..." : "Add Task"}
@@ -669,16 +870,20 @@ export default function TasksPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      )}
 
       {/* Edit Task Dialog */}
-      {currentTask && (
-        <Dialog open={isEditTaskOpen} onOpenChange={setIsEditTaskOpen}>
+      {currentTask && isEditTaskOpen && (
+        <Dialog open={true} onOpenChange={(open) => {
+          console.log("Edit Dialog open state changing to:", open);
+          setIsEditTaskOpen(open);
+        }}>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>Edit Task</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
+            <div className="space-y-3 py-2">
+              <div className="space-y-1">
                 <Label htmlFor="edit-title">Title</Label>
                 <Input
                   id="edit-title"
@@ -686,27 +891,27 @@ export default function TasksPage() {
                   onChange={(e) => setCurrentTask({ ...currentTask, title: e.target.value })}
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label htmlFor="edit-description">Description</Label>
                 <Textarea
                   id="edit-description"
                   value={currentTask.description || ""}
                   onChange={(e) => setCurrentTask({ ...currentTask, description: e.target.value })}
-                  rows={3}
+                  rows={2}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
                   <Label htmlFor="edit-project">Project</Label>
                   <Select
-                    value={currentTask.project_id || ""}
-                    onValueChange={(value) => setCurrentTask({ ...currentTask, project_id: value || null })}
+                    value={currentTask.project_id || "none"}
+                    onValueChange={(value) => setCurrentTask({ ...currentTask, project_id: value === "none" ? null : value })}
                   >
-                    <SelectTrigger id="edit-project">
+                    <SelectTrigger id="edit-project" className="h-8">
                       <SelectValue placeholder="Select project" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No project</SelectItem>
+                      <SelectItem value="none">No project</SelectItem>
                       {projects?.map((project) => (
                         <SelectItem key={project.id} value={project.id}>
                           {project.name}
@@ -715,17 +920,17 @@ export default function TasksPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-assignee">Assignee</Label>
+                <div className="space-y-1">
+                  <Label htmlFor="edit-assignee">Primary Assignee</Label>
                   <Select
-                    value={currentTask.assigned_to || ""}
-                    onValueChange={(value) => setCurrentTask({ ...currentTask, assigned_to: value || null })}
+                    value={currentTask.assigned_to || "none"}
+                    onValueChange={(value) => setCurrentTask({ ...currentTask, assigned_to: value === "none" ? null : value })}
                   >
-                    <SelectTrigger id="edit-assignee">
+                    <SelectTrigger id="edit-assignee" className="h-8">
                       <SelectValue placeholder="Select assignee" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Unassigned</SelectItem>
+                      <SelectItem value="none">Unassigned</SelectItem>
                       {users?.map((user) => (
                         <SelectItem key={user.id} value={user.id}>
                           {user.full_name}
@@ -735,30 +940,72 @@ export default function TasksPage() {
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
+              <div className="space-y-1 col-span-2 mt-2">
+                <Label htmlFor="edit-assigned-users">Additional Team Members</Label>
+                <div className="border rounded-md p-1">
+                  <div className="flex flex-wrap gap-1 max-h-[100px] overflow-y-auto">
+                    {users?.map((user) => {
+                      const isSelected = currentTask.assigned_users?.some(u => u.id === user.id) || false;
+                      return (
+                        <div
+                          key={user.id}
+                          className={`px-2 py-0.5 rounded-full text-xs cursor-pointer ${
+                            isSelected
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-secondary text-secondary-foreground'
+                          }`}
+                          onClick={() => {
+                            let newAssignedUsers: User[] = [...(currentTask.assigned_users || [])];
+
+                            if (isSelected) {
+                              // Remove user
+                              newAssignedUsers = newAssignedUsers.filter(u => u.id !== user.id);
+                            } else {
+                              // Add user
+                              newAssignedUsers.push(user);
+                            }
+
+                            setCurrentTask({
+                              ...currentTask,
+                              assigned_users: newAssignedUsers
+                            });
+                          }}
+                        >
+                          {user.full_name}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                {(currentTask.assigned_users?.length || 0) > 0 && (
+                  <div className="text-xs text-muted-foreground">
+                    Selected: {currentTask.assigned_users?.length} team member(s)
+                  </div>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
                   <Label htmlFor="edit-status">Status</Label>
                   <Select
                     value={currentTask.status}
                     onValueChange={(value) => setCurrentTask({ ...currentTask, status: value as any })}
                   >
-                    <SelectTrigger id="edit-status">
+                    <SelectTrigger id="edit-status" className="h-8">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="todo">To Do</SelectItem>
-                      <SelectItem value="in_progress">In Progress</SelectItem>
                       <SelectItem value="completed">Completed</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <Label htmlFor="edit-priority">Priority</Label>
                   <Select
                     value={currentTask.priority}
                     onValueChange={(value) => setCurrentTask({ ...currentTask, priority: value as any })}
                   >
-                    <SelectTrigger id="edit-priority">
+                    <SelectTrigger id="edit-priority" className="h-8">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -769,15 +1016,15 @@ export default function TasksPage() {
                   </Select>
                 </div>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label>Due Date</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
-                      className="w-full justify-start text-left font-normal"
+                      className="w-full justify-start text-left font-normal h-8 text-sm"
                     >
-                      <Calendar className="mr-2 h-4 w-4" />
+                      <Calendar className="mr-2 h-3 w-3" />
                       {currentTask.due_date ? formatDate(currentTask.due_date) : <span>No due date</span>}
                     </Button>
                   </PopoverTrigger>
@@ -785,9 +1032,9 @@ export default function TasksPage() {
                     <CalendarComponent
                       mode="single"
                       selected={currentTask.due_date ? parseISO(currentTask.due_date) : undefined}
-                      onSelect={(date) => setCurrentTask({ 
-                        ...currentTask, 
-                        due_date: date ? format(date, 'yyyy-MM-dd') : null 
+                      onSelect={(date) => setCurrentTask({
+                        ...currentTask,
+                        due_date: date ? format(date, 'yyyy-MM-dd') : null
                       })}
                       initialFocus
                     />
@@ -796,8 +1043,8 @@ export default function TasksPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button 
-                variant="destructive" 
+              <Button
+                variant="destructive"
                 onClick={() => {
                   deleteTaskMutation.mutate(currentTask.id);
                   setIsEditTaskOpen(false);
@@ -809,7 +1056,7 @@ export default function TasksPage() {
               <DialogClose asChild>
                 <Button variant="outline">Cancel</Button>
               </DialogClose>
-              <Button 
+              <Button
                 onClick={() => updateTaskMutation.mutate(currentTask)}
                 disabled={!currentTask.title.trim() || updateTaskMutation.isPending}
               >
@@ -882,10 +1129,10 @@ export default function TasksPage() {
             <CardContent className="p-4">
               <div className="flex items-start gap-4">
                 <button
-                  onClick={() => handleToggleStatus(task.id, task.status)}
+                  onClick={() => handleToggleStatus(task)}
                   className="mt-1"
                 >
-                  {getStatusIcon(task.status)}
+                  {getStatusIcon(task)}
                 </button>
                 <div className="flex-1">
                   <div className="flex items-start justify-between">
@@ -933,7 +1180,12 @@ export default function TasksPage() {
                     )}
                     {task.assignee && (
                       <Badge variant="outline" className="bg-gray-100 text-gray-800">
-                        Assigned to {task.assignee.full_name}
+                        Primary: {task.assignee.full_name}
+                      </Badge>
+                    )}
+                    {task.assigned_users && task.assigned_users.length > 0 && (
+                      <Badge variant="outline" className="bg-blue-100 text-blue-800">
+                        Team: {task.assigned_users.length} member{task.assigned_users.length !== 1 ? 's' : ''}
                       </Badge>
                     )}
                   </div>

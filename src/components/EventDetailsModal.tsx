@@ -64,9 +64,9 @@ export function EventDetailsModal({ open, onOpenChange, event, onEventUpdated }:
   // Function to delete event
   const handleDeleteEvent = async () => {
     if (!event?.id) return;
-    
+
     setIsDeleting(true);
-    
+
     try {
       // Check if this is a calendar event or a task
       if (event.event_type === 'task' && !event.all_day) {
@@ -75,7 +75,7 @@ export function EventDetailsModal({ open, onOpenChange, event, onEventUpdated }:
           .from('tasks')
           .delete()
           .eq('id', event.id);
-          
+
         if (error) throw error;
       } else {
         // This is a calendar event
@@ -83,17 +83,17 @@ export function EventDetailsModal({ open, onOpenChange, event, onEventUpdated }:
           .from('calendar_events')
           .delete()
           .eq('id', event.id);
-          
+
         if (error) throw error;
       }
-      
+
       toast({
         title: "Event deleted",
         description: "The event has been removed from your calendar.",
       });
-      
+
       onOpenChange(false);
-      
+
       // Call callback if provided
       if (onEventUpdated) {
         onEventUpdated();
@@ -113,13 +113,14 @@ export function EventDetailsModal({ open, onOpenChange, event, onEventUpdated }:
   // Function to handle edit button click
   const handleEditClick = () => {
     setIsEditing(true);
-    // For now, we'll just close the modal
-    // In a real implementation, you'd open an edit form
+    // Close the details modal
     onOpenChange(false);
-    toast({
-      title: "Edit functionality",
-      description: "Edit functionality will be implemented in a future update.",
-    });
+
+    // We'll use the existing NewEventModal for editing by passing the event data
+    // This will be handled in the parent component (Calendar.tsx)
+    if (onEventUpdated) {
+      onEventUpdated();
+    }
   };
 
   if (!event) return null;
@@ -201,8 +202,8 @@ export function EventDetailsModal({ open, onOpenChange, event, onEventUpdated }:
           </div>
         </AlertDialogDescription>
         <AlertDialogFooter className="flex justify-between">
-          <Button 
-            variant="destructive" 
+          <Button
+            variant="destructive"
             size="sm"
             onClick={handleDeleteEvent}
             disabled={isDeleting}
