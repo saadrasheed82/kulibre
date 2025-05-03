@@ -158,12 +158,12 @@ export default function CalendarPage() {
         let eventsResponse = { data: null, error: null };
         try {
           console.log("Querying calendar events table");
+          // First, try to get the events without the creator join
           let eventsQuery = supabase
             .from('calendar_events')
             .select(`
               *,
-              project:project_id (id, name),
-              creator:created_by (id, full_name)
+              project:project_id (id, name)
             `);
 
           // Apply search query filter
@@ -172,12 +172,12 @@ export default function CalendarPage() {
           }
 
           // Apply event type filter
-          if (filters.eventType) {
+          if (filters.eventType && filters.eventType !== 'all') {
             eventsQuery = eventsQuery.eq('event_type', filters.eventType);
           }
 
           // Apply team member filter
-          if (filters.teamMember) {
+          if (filters.teamMember && filters.teamMember !== 'all') {
             try {
               // Get the current user to check if they're filtering for their own events
               const { data: { user } } = await supabase.auth.getUser();
@@ -235,6 +235,39 @@ export default function CalendarPage() {
           }
 
           console.log("Events fetched successfully:", eventsResponse.data?.length || 0);
+
+          // If we have events, try to fetch creator information separately
+          if (eventsResponse.data && eventsResponse.data.length > 0) {
+            try {
+              // Get all creator IDs
+              const creatorIds = [...new Set(eventsResponse.data.map(event => event.created_by))];
+
+              // Fetch creator profiles
+              const { data: creatorProfiles, error: creatorError } = await supabase
+                .from('profiles')
+                .select('id, full_name')
+                .in('id', creatorIds);
+
+              if (!creatorError && creatorProfiles) {
+                // Create a map of creator profiles for easy lookup
+                const creatorMap = {};
+                creatorProfiles.forEach(profile => {
+                  creatorMap[profile.id] = profile;
+                });
+
+                // Add creator information to each event
+                eventsResponse.data = eventsResponse.data.map(event => ({
+                  ...event,
+                  creator: creatorMap[event.created_by] || null
+                }));
+              } else {
+                console.warn("Could not fetch creator profiles:", creatorError);
+              }
+            } catch (creatorError) {
+              console.warn("Error fetching creator profiles:", creatorError);
+              // Continue without creator information rather than failing
+            }
+          }
         } catch (error) {
           console.error("Exception in calendar events query:", error);
           // Return empty data if there's an exception
@@ -258,16 +291,53 @@ export default function CalendarPage() {
             const eventIds = eventsResponse.data.map(event => event.id);
 
             // Fetch all attendees for these events in a single query
+            // First try without the profile join
             const { data: allAttendees, error: attendeesError } = await supabase
               .from('event_attendees')
               .select(`
                 event_id,
                 user_id,
                 role,
-                response,
-                profile:profiles!event_attendees_user_id_fkey (id, full_name, avatar_url)
+                response
               `)
               .in('event_id', eventIds);
+
+            // If we have attendees, fetch their profiles separately
+            let attendeesWithProfiles = [];
+            if (!attendeesError && allAttendees && allAttendees.length > 0) {
+              try {
+                // Get all user IDs
+                const userIds = [...new Set(allAttendees.map(attendee => attendee.user_id))];
+
+                // Fetch user profiles
+                const { data: userProfiles, error: profilesError } = await supabase
+                  .from('profiles')
+                  .select('id, full_name, avatar_url')
+                  .in('id', userIds);
+
+                if (!profilesError && userProfiles) {
+                  // Create a map of user profiles for easy lookup
+                  const profileMap = {};
+                  userProfiles.forEach(profile => {
+                    profileMap[profile.id] = profile;
+                  });
+
+                  // Add profile information to each attendee
+                  attendeesWithProfiles = allAttendees.map(attendee => ({
+                    ...attendee,
+                    profile: profileMap[attendee.user_id] || null
+                  }));
+                } else {
+                  console.warn("Could not fetch attendee profiles:", profilesError);
+                  attendeesWithProfiles = allAttendees;
+                }
+              } catch (profileError) {
+                console.warn("Error fetching attendee profiles:", profileError);
+                attendeesWithProfiles = allAttendees;
+              }
+            } else {
+              attendeesWithProfiles = allAttendees || [];
+            }
 
             if (attendeesError) {
               console.error("Error fetching attendees:", attendeesError);
@@ -275,8 +345,8 @@ export default function CalendarPage() {
 
             // Group attendees by event_id for easier lookup
             const attendeesByEvent = {};
-            if (allAttendees) {
-              allAttendees.forEach(attendee => {
+            if (attendeesWithProfiles) {
+              attendeesWithProfiles.forEach(attendee => {
                 if (!attendeesByEvent[attendee.event_id]) {
                   attendeesByEvent[attendee.event_id] = [];
                 }
@@ -309,49 +379,112 @@ export default function CalendarPage() {
         let tasksData = [];
         try {
           console.log("Fetching tasks for calendar");
-          let tasksQuery = supabase
-            .from('tasks')
-            .select(`
-              id,
-              title,
-              due_date,
-              priority,
-              description,
-              status,
-              project:project_id (id, name),
-              assignee:assigned_to (id, full_name, avatar_url)
-            `)
-            .not('due_date', 'is', null);
+          // Check the tasks table structure first
+          try {
+            // First, get a simpler query to work
+            let tasksQuery = supabase
+              .from('tasks')
+              .select(`
+                id,
+                title,
+                due_date,
+                project_id
+              `)
+              .not('due_date', 'is', null);
 
           if (searchQuery) {
             tasksQuery = tasksQuery.or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
           }
 
-          if (filters.teamMember) {
-            tasksQuery = tasksQuery.eq('assigned_to', filters.teamMember);
+          // For tasks, we need to join with user_tasks to get assigned tasks
+          if (filters.teamMember && filters.teamMember !== 'all') {
+            // We'll handle this in a separate query after getting the basic tasks
           }
 
-          // If event type filter is set to 'task', include tasks, otherwise exclude them
-          if (filters.eventType && filters.eventType !== 'task') {
-            // Return no tasks if filtering for non-task event types
-            tasksQuery = tasksQuery.eq('id', '00000000-0000-0000-0000-000000000000');
-          }
-
-          const tasksResponse = await tasksQuery;
-
-          if (tasksResponse.error) {
-            console.error("Error fetching tasks:", tasksResponse.error);
+          // If event type filter is set to something other than 'task' or 'all', exclude tasks
+          if (filters.eventType && filters.eventType !== 'task' && filters.eventType !== 'all') {
+            // Skip fetching tasks if filtering for non-task event types
+            console.log("Skipping tasks due to event type filter:", filters.eventType);
           } else {
-            console.log("Tasks fetched successfully:", tasksResponse.data?.length || 0);
+            const tasksResponse = await tasksQuery;
 
-            // Transform tasks to have a consistent format with calendar events
-            tasksData = (tasksResponse.data || []).map(task => ({
-              ...task,
-              event_type: 'task' as const,
-              start_date: task.due_date,
-              all_day: true, // Tasks are typically all-day events
-              project_id: task.project?.id
-            }));
+            if (tasksResponse.error) {
+              console.error("Error fetching tasks:", tasksResponse.error);
+            } else {
+              console.log("Tasks fetched successfully:", tasksResponse.data?.length || 0);
+
+              // Get project information for tasks
+              let tasksWithProjects = [...tasksResponse.data];
+
+              if (tasksResponse.data && tasksResponse.data.length > 0) {
+                try {
+                  // Get all project IDs
+                  const projectIds = tasksResponse.data
+                    .filter(task => task.project_id)
+                    .map(task => task.project_id);
+
+                  if (projectIds.length > 0) {
+                    // Fetch project information
+                    const { data: projectsData, error: projectsError } = await supabase
+                      .from('projects')
+                      .select('id, name')
+                      .in('id', projectIds);
+
+                    if (!projectsError && projectsData) {
+                      // Create a map of projects for easy lookup
+                      const projectMap = {};
+                      projectsData.forEach(project => {
+                        projectMap[project.id] = project;
+                      });
+
+                      // Add project information to tasks
+                      tasksWithProjects = tasksResponse.data.map(task => ({
+                        ...task,
+                        project: task.project_id ? projectMap[task.project_id] : null
+                      }));
+                    }
+                  }
+                } catch (projectError) {
+                  console.warn("Error fetching project information:", projectError);
+                }
+              }
+
+              // If team member filter is applied, filter tasks by assigned user
+              if (filters.teamMember && filters.teamMember !== 'all') {
+                try {
+                  // Get tasks assigned to this user from user_tasks table
+                  const { data: userTasksData, error: userTasksError } = await supabase
+                    .from('user_tasks')
+                    .select('task_id')
+                    .eq('user_id', filters.teamMember);
+
+                  if (!userTasksError && userTasksData) {
+                    // Get the task IDs assigned to this user
+                    const assignedTaskIds = userTasksData.map(ut => ut.task_id);
+
+                    // Filter tasks to only include those assigned to this user
+                    tasksWithProjects = tasksWithProjects.filter(task =>
+                      assignedTaskIds.includes(task.id)
+                    );
+                  }
+                } catch (userTasksError) {
+                  console.warn("Error fetching user tasks:", userTasksError);
+                }
+              }
+
+              // Transform tasks to have a consistent format with calendar events
+              tasksData = tasksWithProjects.map(task => ({
+                ...task,
+                event_type: 'task' as const,
+                start_date: task.due_date,
+                all_day: true, // Tasks are typically all-day events
+                priority: 'medium', // Default priority if not specified
+                status: task.status || 'pending'
+              }));
+            }
+          }
+          } catch (innerError) {
+            console.error("Inner exception in tasks query:", innerError);
           }
         } catch (error) {
           console.error("Exception fetching tasks:", error);

@@ -228,6 +228,9 @@ export interface Database {
           role: string | null
           company: string | null
           created_at: string | null
+          job_title: string | null
+          department: string | null
+          active: boolean | null
         }
         Insert: {
           id: string
@@ -239,6 +242,9 @@ export interface Database {
           role?: string | null
           company?: string | null
           created_at?: string | null
+          job_title?: string | null
+          department?: string | null
+          active?: boolean | null
         }
         Update: {
           id?: string
@@ -250,6 +256,9 @@ export interface Database {
           role?: string | null
           company?: string | null
           created_at?: string | null
+          job_title?: string | null
+          department?: string | null
+          active?: boolean | null
         }
         Relationships: [
           {
@@ -548,32 +557,42 @@ export interface Database {
       team_invitations: {
         Row: {
           id: string
-          team_id: string
           email: string
           role: string
+          user_id: string | null
           token: string
-          expires_at: string
           created_at: string
+          expires_at: string | null
+          accepted_at: string | null
         }
         Insert: {
           id?: string
-          team_id: string
           email: string
           role?: string
+          user_id?: string | null
           token: string
-          expires_at: string
           created_at?: string
+          expires_at?: string | null
+          accepted_at?: string | null
         }
         Update: {
           id?: string
-          team_id?: string
           email?: string
           role?: string
+          user_id?: string | null
           token?: string
-          expires_at?: string
           created_at?: string
+          expires_at?: string | null
+          accepted_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "team_invitations_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       time_entries: {
         Row: {

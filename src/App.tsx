@@ -11,6 +11,7 @@ import ProjectsPageSimple from "./pages/ProjectsPageSimple";
 import ProjectDetailsPage from "./pages/ProjectDetailsPage";
 import Calendar from "./pages/Calendar";
 import TasksPage from "./pages/TasksPage";
+import TeamPage from "./pages/TeamPage";
 import Files from "./pages/Files";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -70,6 +71,7 @@ export default function App() {
             <Route path="/projects" element={<Layout><ProjectsPageSimple /></Layout>} />
             <Route path="/project/:id" element={<Layout><ProjectDetailsPage /></Layout>} />
             <Route path="/tasks" element={<Layout><TasksPage /></Layout>} />
+            <Route path="/team" element={<Layout><TeamPage /></Layout>} />
             <Route path="/calendar" element={<Layout><Calendar /></Layout>} />
             <Route path="/files" element={<Layout><Files /></Layout>} />
             <Route path="/settings" element={<Layout><Settings /></Layout>} />

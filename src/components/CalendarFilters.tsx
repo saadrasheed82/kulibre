@@ -39,7 +39,7 @@ export function CalendarFilters({ onFilterChange }: CalendarFiltersProps) {
           .from('profiles')
           .select('id, full_name')
           .order('full_name');
-          
+
         if (error) throw error;
         return data || [];
       } catch (error) {
@@ -52,8 +52,8 @@ export function CalendarFilters({ onFilterChange }: CalendarFiltersProps) {
   const form = useForm<CalendarFiltersType>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
-      teamMember: "",
-      eventType: undefined,
+      teamMember: "all",
+      eventType: "all",
     },
   });
 
@@ -71,8 +71,8 @@ export function CalendarFilters({ onFilterChange }: CalendarFiltersProps) {
 
   function handleReset() {
     form.reset({
-      teamMember: "",
-      eventType: undefined,
+      teamMember: "all",
+      eventType: "all",
     });
     onFilterChange({});
   }
@@ -87,14 +87,14 @@ export function CalendarFilters({ onFilterChange }: CalendarFiltersProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Team Member</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || ""}>
+                <Select onValueChange={field.onChange} value={field.value || undefined}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="All team members" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">All team members</SelectItem>
+                    <SelectItem value="all">All team members</SelectItem>
                     {teamMembers?.map(member => (
                       <SelectItem key={member.id} value={member.id}>
                         {member.full_name}
@@ -112,14 +112,14 @@ export function CalendarFilters({ onFilterChange }: CalendarFiltersProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Event Type</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || ""}>
+                <Select onValueChange={field.onChange} value={field.value || undefined}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="All event types" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">All event types</SelectItem>
+                    <SelectItem value="all">All event types</SelectItem>
                     <SelectItem value="task">Task Deadline</SelectItem>
                     <SelectItem value="meeting">Client Meeting</SelectItem>
                     <SelectItem value="milestone">Project Milestone</SelectItem>
@@ -132,9 +132,9 @@ export function CalendarFilters({ onFilterChange }: CalendarFiltersProps) {
           />
         </div>
         <div className="flex justify-end">
-          <Button 
-            type="button" 
-            variant="outline" 
+          <Button
+            type="button"
+            variant="outline"
             onClick={handleReset}
           >
             Reset Filters

@@ -74,6 +74,34 @@ export function NewEventModal({
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalTitle, setModalTitle] = useState("Add New Event");
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+
+  // Check if user is authenticated when modal opens
+  useEffect(() => {
+    if (open) {
+      const checkAuth = async () => {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          setIsAuthenticated(!!user);
+
+          if (!user) {
+            toast({
+              title: "Authentication required",
+              description: "You must be logged in to create or update events. Please log in and try again.",
+              variant: "destructive",
+            });
+            onOpenChange(false);
+          }
+        } catch (error) {
+          console.error("Error checking authentication:", error);
+          setIsAuthenticated(false);
+          onOpenChange(false);
+        }
+      };
+
+      checkAuth();
+    }
+  }, [open, onOpenChange, toast]);
 
   // Fetch projects for the dropdown
   const { data: projects } = useQuery({
@@ -158,7 +186,13 @@ export function NewEventModal({
       const { data: { user } } = await supabase.auth.getUser();
 
       if (!user) {
-        throw new Error("You must be logged in to create or update an event");
+        toast({
+          title: "Authentication required",
+          description: "You must be logged in to create or update an event. Please log in and try again.",
+          variant: "destructive",
+        });
+        onOpenChange(false);
+        return;
       }
 
       // Format start date with time if not all day
@@ -186,7 +220,7 @@ export function NewEventModal({
             start_date: startDateTime.toISOString(),
             end_date: endDateTime ? endDateTime.toISOString() : null,
             all_day: values.allDay,
-            project_id: values.projectId || null,
+            project_id: values.projectId && values.projectId !== "none" ? values.projectId : null,
             updated_at: new Date().toISOString(),
           })
           .eq('id', event.id);
@@ -246,7 +280,7 @@ export function NewEventModal({
             start_date: startDateTime.toISOString(),
             end_date: endDateTime ? endDateTime.toISOString() : null,
             all_day: values.allDay,
-            project_id: values.projectId || null,
+            project_id: values.projectId && values.projectId !== "none" ? values.projectId : null,
             created_by: user.id,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
@@ -301,17 +335,24 @@ export function NewEventModal({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-[500px]">
-        <AlertDialogHeader>
-          <AlertDialogTitle>{modalTitle}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {isEditing
-              ? "Update the details of your calendar event."
-              : "Create a new event to add to your calendar."}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <AlertDialogContent className="max-w-[500px] max-h-[90vh] overflow-y-auto">
+        {isAuthenticated === null ? (
+          <div className="py-8 text-center">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
+            <p className="mt-4 text-sm text-muted-foreground">Checking authentication...</p>
+          </div>
+        ) : isAuthenticated ? (
+          <>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{modalTitle}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {isEditing
+                  ? "Update the details of your calendar event."
+                  : "Create a new event to add to your calendar."}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
             <FormField
               control={form.control}
               name="title"
@@ -319,67 +360,69 @@ export function NewEventModal({
                 <FormItem>
                   <FormLabel>Event Title</FormLabel>
                   <FormControl>
-                    <Input placeholder="Event Title" {...field} />
+                    <Input placeholder="Event Title" className="h-8" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="eventType"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Event Type</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select event type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="task">Task Deadline</SelectItem>
-                      <SelectItem value="meeting">Client Meeting</SelectItem>
-                      <SelectItem value="milestone">Project Milestone</SelectItem>
-                      <SelectItem value="reminder">Internal Reminder</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="eventType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Event Type</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="h-8">
+                          <SelectValue placeholder="Select event type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="task">Task Deadline</SelectItem>
+                        <SelectItem value="meeting">Client Meeting</SelectItem>
+                        <SelectItem value="milestone">Project Milestone</SelectItem>
+                        <SelectItem value="reminder">Internal Reminder</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="projectId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Related Project</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value || ""}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a project (optional)" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="">None</SelectItem>
-                      {projects?.map(project => (
-                        <SelectItem key={project.id} value={project.id}>
-                          {project.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="projectId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Related Project</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || "none"}>
+                      <FormControl>
+                        <SelectTrigger className="h-8">
+                          <SelectValue placeholder="Select project" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {projects?.map(project => (
+                          <SelectItem key={project.id} value={project.id}>
+                            {project.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
               name="allDay"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-2">
                   <FormControl>
                     <Checkbox
                       checked={field.value}
@@ -388,9 +431,7 @@ export function NewEventModal({
                   </FormControl>
                   <div className="space-y-1 leading-none">
                     <FormLabel>All-day event</FormLabel>
-                    <FormDescription>
-                      This event will take the entire day
-                    </FormDescription>
+
                   </div>
                 </FormItem>
               )}
@@ -409,7 +450,7 @@ export function NewEventModal({
                           <Button
                             variant={"outline"}
                             className={cn(
-                              "w-full pl-3 text-left font-normal",
+                              "w-full pl-3 text-left font-normal h-8",
                               !field.value && "text-muted-foreground"
                             )}
                           >
@@ -446,7 +487,7 @@ export function NewEventModal({
                       <div className="flex items-center">
                         <Clock className="mr-2 h-4 w-4 opacity-50" />
                         <FormControl>
-                          <Input type="time" {...field} />
+                          <Input type="time" className="h-8" {...field} />
                         </FormControl>
                       </div>
                       <FormMessage />
@@ -469,7 +510,7 @@ export function NewEventModal({
                           <Button
                             variant={"outline"}
                             className={cn(
-                              "w-full pl-3 text-left font-normal",
+                              "w-full pl-3 text-left font-normal h-8",
                               !field.value && "text-muted-foreground"
                             )}
                           >
@@ -509,7 +550,7 @@ export function NewEventModal({
                       <div className="flex items-center">
                         <Clock className="mr-2 h-4 w-4 opacity-50" />
                         <FormControl>
-                          <Input type="time" {...field} />
+                          <Input type="time" className="h-8" {...field} />
                         </FormControl>
                       </div>
                       <FormMessage />
@@ -536,7 +577,7 @@ export function NewEventModal({
                     }}
                   >
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className="h-8">
                         <SelectValue placeholder={
                           field.value.length > 0
                             ? `${field.value.length} attendee(s) selected`
@@ -558,14 +599,14 @@ export function NewEventModal({
                       ))}
                     </SelectContent>
                   </Select>
-                  <FormDescription>
-                    Selected: {field.value.length > 0
-                      ? teamMembers
-                          ?.filter(m => field.value.includes(m.id))
-                          .map(m => m.full_name)
-                          .join(", ")
-                      : "None"}
-                  </FormDescription>
+                  {field.value.length > 0 && (
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Selected: {teamMembers
+                        ?.filter(m => field.value.includes(m.id))
+                        .map(m => m.full_name)
+                        .join(", ")}
+                    </div>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
@@ -580,13 +621,11 @@ export function NewEventModal({
                   <FormControl>
                     <Textarea
                       placeholder="Event description"
-                      className="resize-none"
+                      className="resize-none h-20"
                       {...field}
                     />
                   </FormControl>
-                  <FormDescription>
-                    Add any relevant details about the event.
-                  </FormDescription>
+
                   <FormMessage />
                 </FormItem>
               )}
@@ -602,6 +641,19 @@ export function NewEventModal({
             </AlertDialogFooter>
           </form>
         </Form>
+        </>
+        ) : (
+          <div className="py-8 text-center">
+            <p className="text-red-500 mb-2">Authentication Required</p>
+            <p className="text-muted-foreground mb-4">You must be logged in to create or update events.</p>
+            <Button
+              onClick={() => window.location.href = '/login'}
+              variant="default"
+            >
+              Go to Login
+            </Button>
+          </div>
+        )}
       </AlertDialogContent>
     </AlertDialog>
   )

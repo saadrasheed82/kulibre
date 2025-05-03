@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { 
-  ArrowLeft, 
-  Calendar, 
-  Clock, 
-  DollarSign, 
-  Edit, 
-  MoreHorizontal, 
+import {
+  ArrowLeft,
+  Calendar,
+  Clock,
+  DollarSign,
+  Edit,
+  MoreHorizontal,
   Users,
   Plus,
   CheckCircle2,
@@ -64,7 +64,7 @@ export default function ProjectDetailsPage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [databaseError, setDatabaseError] = useState(false);
-  
+
   // Define a type for the project object to handle optional properties
   type ProjectType = {
     id: string;
@@ -129,10 +129,10 @@ export default function ProjectDetailsPage() {
           .select('id, name, description, type, status')
           .eq('id', id)
           .single();
-          
+
         if (basicProjectError) {
           console.error("Error fetching basic project data:", basicProjectError);
-          
+
           if (basicProjectError.code === 'PGRST116') {
             console.log("Project not found");
             toast({
@@ -143,12 +143,12 @@ export default function ProjectDetailsPage() {
             navigate('/projects', { replace: true });
             return null;
           }
-          
+
           throw basicProjectError;
         }
-        
+
         console.log("Basic project data fetched successfully:", basicProject);
-        
+
         // Now fetch full project details
         console.log("Fetching complete project details...");
         const { data: projectData, error: projectError } = await supabase
@@ -433,7 +433,7 @@ CREATE TABLE IF NOT EXISTS public.project_members (
               </code>
             </pre>
             <p className="text-sm text-amber-600 mt-4">
-              <strong>Important:</strong> Make sure your database schema matches the application code. 
+              <strong>Important:</strong> Make sure your database schema matches the application code.
               The application expects <code>type</code> and <code>status</code> to be TEXT fields, not ENUMs.
             </p>
             <p className="text-sm mt-2">
@@ -697,7 +697,7 @@ CREATE TABLE IF NOT EXISTS public.project_members (
               )}
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader>
               <CardTitle>Project Details</CardTitle>
@@ -766,11 +766,11 @@ CREATE TABLE IF NOT EXISTS public.project_members (
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="tasks" className="space-y-4">
           <ProjectTasksTab projectId={id} />
         </TabsContent>
-        
+
         <TabsContent value="files" className="space-y-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
@@ -784,7 +784,7 @@ CREATE TABLE IF NOT EXISTS public.project_members (
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="team" className="space-y-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
@@ -868,7 +868,7 @@ function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
     description: "",
     status: "todo",
     priority: "medium",
-    assigned_to: "",
+    assigned_to: "unassigned",
     due_date: null as Date | null
   });
 
@@ -926,7 +926,7 @@ function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
           project_id: projectId,
           status: task.status,
           priority: task.priority,
-          assigned_to: task.assigned_to || null,
+          assigned_to: task.assigned_to === "unassigned" ? null : task.assigned_to,
           due_date: task.due_date ? format(task.due_date, 'yyyy-MM-dd') : null
         }])
         .select();
@@ -962,7 +962,7 @@ function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
           description: task.description,
           status: task.status,
           priority: task.priority,
-          assigned_to: task.assigned_to || null,
+          assigned_to: task.assigned_to === "unassigned" ? null : task.assigned_to,
           due_date: task.due_date,
           completed_at: task.status === 'completed' ? new Date().toISOString() : null
         })
@@ -1048,7 +1048,7 @@ function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
       description: "",
       status: "todo",
       priority: "medium",
-      assigned_to: "",
+      assigned_to: "unassigned",
       due_date: null
     });
   };
@@ -1188,7 +1188,7 @@ function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
                   <SelectValue placeholder="Select assignee" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Unassigned</SelectItem>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
                   {users?.map((user: any) => (
                     <SelectItem key={user.id} value={user.id}>
                       {user.full_name}
@@ -1258,7 +1258,7 @@ function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
             <DialogClose asChild>
               <Button variant="outline">Cancel</Button>
             </DialogClose>
-            <Button 
+            <Button
               onClick={() => addTaskMutation.mutate(newTask)}
               disabled={!newTask.title.trim() || addTaskMutation.isPending}
             >
@@ -1296,14 +1296,14 @@ function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
               <div className="space-y-2">
                 <Label htmlFor="edit-assignee">Assignee</Label>
                 <Select
-                  value={currentTask.assigned_to || ""}
-                  onValueChange={(value) => setCurrentTask({ ...currentTask, assigned_to: value || null })}
+                  value={currentTask.assigned_to || "unassigned"}
+                  onValueChange={(value) => setCurrentTask({ ...currentTask, assigned_to: value })}
                 >
                   <SelectTrigger id="edit-assignee">
                     <SelectValue placeholder="Select assignee" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Unassigned</SelectItem>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
                     {users?.map((user: any) => (
                       <SelectItem key={user.id} value={user.id}>
                         {user.full_name}
@@ -1362,9 +1362,9 @@ function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
                     <CalendarComponent
                       mode="single"
                       selected={currentTask.due_date ? parseISO(currentTask.due_date) : undefined}
-                      onSelect={(date) => setCurrentTask({ 
-                        ...currentTask, 
-                        due_date: date ? format(date, 'yyyy-MM-dd') : null 
+                      onSelect={(date) => setCurrentTask({
+                        ...currentTask,
+                        due_date: date ? format(date, 'yyyy-MM-dd') : null
                       })}
                       initialFocus
                     />
@@ -1373,8 +1373,8 @@ function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
               </div>
             </div>
             <DialogFooter>
-              <Button 
-                variant="destructive" 
+              <Button
+                variant="destructive"
                 onClick={() => {
                   deleteTaskMutation.mutate(currentTask.id);
                   setIsEditTaskOpen(false);
@@ -1386,7 +1386,7 @@ function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
               <DialogClose asChild>
                 <Button variant="outline">Cancel</Button>
               </DialogClose>
-              <Button 
+              <Button
                 onClick={() => updateTaskMutation.mutate(currentTask)}
                 disabled={!currentTask.title.trim() || updateTaskMutation.isPending}
               >
