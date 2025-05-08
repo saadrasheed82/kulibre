@@ -19,10 +19,10 @@ export function MobileNavigation() {
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between p-4 border-b">
             <div className="flex items-center gap-2">
-              <div className="bg-creatively-purple rounded-lg w-8 h-8 flex items-center justify-center">
-                <span className="text-white font-bold">C</span>
+              <div className="bg-kulibre-purple rounded-lg w-8 h-8 flex items-center justify-center">
+                <span className="text-white font-bold">K</span>
               </div>
-              <h1 className="text-xl font-bold">Creatively</h1>
+              <h1 className="text-xl font-bold">kulibre</h1>
             </div>
             <button onClick={() => setOpen(false)}>
               <X className="h-5 w-5" />
@@ -89,8 +89,8 @@ function MobileNavItem({ icon, href, label, active, onClick }: MobileNavItemProp
       className={cn(
         "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
         active
-          ? "bg-creatively-purple text-white"
-          : "text-muted-foreground hover:bg-creatively-purple/10 hover:text-foreground"
+          ? "bg-kulibre-purple text-white"
+          : "text-muted-foreground hover:bg-kulibre-purple/10 hover:text-foreground"
       )}
       onClick={onClick}
     >

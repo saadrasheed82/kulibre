@@ -145,105 +145,56 @@ export function AddMemberModal({ open, onOpenChange, onAdded }: AddMemberModalPr
           ? Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-10)
           : values.password;
 
-        // Map our role values to the user_role enum values in the database
-        let dbRole = "team_member";
+        // Map our role values to the database role values
+        let dbRole = "rider";
         switch (values.role) {
           case "admin":
             dbRole = "admin";
             break;
           case "manager":
           case "member":
-            dbRole = "team_member";
+            dbRole = "rider";
             break;
           case "viewer":
             dbRole = "client";
             break;
         }
 
-        // Since we can't directly create users with the client-side API,
-        // we'll create a team invitation instead
-        const token = uuidv4();
-        const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
+        // Split the full name into first and last name
+        const nameParts = values.full_name.split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
 
-        // Create an invitation
-        console.log("Creating invitation with data:", {
-          email: values.email,
-          role: dbRole,
-          token: token,
-          expires_at: expiresAt.toISOString(),
-          metadata: {
+        // Create a new team member directly
+        const { data: teamMemberData, error: teamMemberError } = await supabase
+          .from('team_members')
+          .insert({
+            id: uuidv4(), // Generate a new UUID for the team member
             full_name: values.full_name,
-            job_title: values.job_title,
-            department: values.department,
-            projects: values.assignToProjects ? values.projects : [],
-            password: password
-          }
-        });
+            first_name: firstName,
+            last_name: lastName,
+            email: values.email, // Store the actual email
+            role: dbRole,
+            job_title: values.job_title || null,
+            department: values.department || null,
+            active: values.active
+          })
+          .select()
+          .single();
 
-        // First try with JSON.stringify
-        try {
-          const { data: invitationData, error: invitationError } = await supabase
-            .from('team_invitations')
-            .insert({
-              email: values.email,
-              role: dbRole,
-              token: token,
-              expires_at: expiresAt.toISOString(),
-              // Store additional data in the invitation
-              metadata: {
-                full_name: values.full_name,
-                job_title: values.job_title,
-                department: values.department,
-                projects: values.assignToProjects ? values.projects : [],
-                password: password // In a real app, you would never store passwords like this
-              }
-            })
-            .select()
-            .single();
+        console.log("Team member creation attempt:", { teamMemberData, teamMemberError });
 
-          console.log("Invitation creation attempt:", { invitationData, invitationError });
-
-          if (invitationError) {
-            throw invitationError;
-          }
-
-          return {
-            invitation: invitationData,
-            password: values.generatePassword ? password : undefined,
-          };
-        } catch (error) {
-          console.error("Error in first attempt:", error);
-
-          // If that fails, try without the metadata
-          const { data: invitationData, error: invitationError } = await supabase
-            .from('team_invitations')
-            .insert({
-              email: values.email,
-              role: dbRole,
-              token: token,
-              expires_at: expiresAt.toISOString()
-            })
-            .select()
-            .single();
-
-          console.log("Invitation creation attempt (fallback):", { invitationData, invitationError });
-
-          if (invitationError) {
-            console.error("Error creating invitation (fallback):", invitationError);
-            throw invitationError;
-          }
-
-          console.log("Invitation created successfully (fallback):", invitationData);
-
-          // In a real application, you would send an email with the invitation link
-          // For this demo, we'll just show a success message with the password
-
-          return {
-            invitation: invitationData,
-            password: values.generatePassword ? password : undefined,
-          };
+        if (teamMemberError) {
+          console.error("Error creating team member:", teamMemberError);
+          throw teamMemberError;
         }
+
+        console.log("Team member created successfully:", teamMemberData);
+
+        return {
+          profile: teamMemberData,
+          password: values.generatePassword ? password : undefined,
+        };
       } catch (error) {
         console.error("Error adding member:", error);
         throw error;
@@ -252,18 +203,10 @@ export function AddMemberModal({ open, onOpenChange, onAdded }: AddMemberModalPr
       }
     },
     onSuccess: (data) => {
-      if (data.password) {
-        toast({
-          title: "Success",
-          description: `Invitation created successfully. When the user accepts, they can use this password: ${data.password}`,
-          duration: 10000, // Show for 10 seconds so user can copy the password
-        });
-      } else {
-        toast({
-          title: "Success",
-          description: "Invitation created successfully.",
-        });
-      }
+      toast({
+        title: "Success",
+        description: "Team member added successfully.",
+      });
       form.reset({
         full_name: "",
         email: "",
@@ -298,7 +241,7 @@ export function AddMemberModal({ open, onOpenChange, onAdded }: AddMemberModalPr
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create Team Member Invitation</DialogTitle>
+          <DialogTitle>Add Team Member</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit, (errors) => {
@@ -532,7 +475,7 @@ export function AddMemberModal({ open, onOpenChange, onAdded }: AddMemberModalPr
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Creating Invitation..." : "Create Invitation"}
+                {isSubmitting ? "Adding Member..." : "Add Member"}
               </Button>
             </DialogFooter>
           </form>

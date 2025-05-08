@@ -63,19 +63,19 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
-				// Creatively custom colors
-				"creatively-purple": {
-					DEFAULT: "#9b87f5", 
+				// kulibre custom colors
+				"kulibre-purple": {
+					DEFAULT: "#9b87f5",
 					light: "#e5deff",
 					dark: "#7E69AB"
 				},
-				"creatively-green": "#F2FCE2",
-				"creatively-yellow": "#FEF7CD",
-				"creatively-orange": "#FEC6A1",
-				"creatively-pink": "#FFDEE2",
-				"creatively-peach": "#FDE1D3",
-				"creatively-blue": "#D3E4FD",
-				"creatively-gray": "#F1F0FB"
+				"kulibre-green": "#F2FCE2",
+				"kulibre-yellow": "#FEF7CD",
+				"kulibre-orange": "#FEC6A1",
+				"kulibre-pink": "#FFDEE2",
+				"kulibre-peach": "#FDE1D3",
+				"kulibre-blue": "#D3E4FD",
+				"kulibre-gray": "#F1F0FB"
 			},
 			fontFamily: {
 				sans: ['Inter', 'sans-serif'],

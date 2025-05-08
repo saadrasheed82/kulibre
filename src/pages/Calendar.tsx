@@ -633,8 +633,14 @@ export default function CalendarPage() {
     queryClient.invalidateQueries({ queryKey: ['calendar-events'] });
     setEventDetailsModalOpen(false);
 
-    // If we're editing an event, open the NewEventModal with the selected event data
+    // When the user clicks Edit in the EventDetailsModal, open the NewEventModal with the selected event data
     if (selectedEvent) {
+      // If this is a task from the tasks table, convert it to a calendar event format
+      if (selectedEvent.event_type === 'task' && !selectedEvent.calendar_event) {
+        // Mark that this is a task being converted to a calendar event
+        selectedEvent.is_task_conversion = true;
+      }
+
       setIsEditingEvent(true);
       setNewEventModalOpen(true);
     }
@@ -948,7 +954,8 @@ export default function CalendarPage() {
                               setSelectedEvent({
                                 ...task,
                                 event_type: 'task',
-                                start_date: task.due_date
+                                start_date: task.due_date,
+                                all_day: true
                               });
                               setEventDetailsModalOpen(true);
                             }}
@@ -958,7 +965,8 @@ export default function CalendarPage() {
                               handleDragStart({
                                 ...task,
                                 event_type: 'task',
-                                start_date: task.due_date
+                                start_date: task.due_date,
+                                all_day: true
                               });
                             }}
                           >

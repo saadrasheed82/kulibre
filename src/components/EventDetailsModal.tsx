@@ -69,7 +69,7 @@ export function EventDetailsModal({ open, onOpenChange, event, onEventUpdated }:
 
     try {
       // Check if this is a calendar event or a task
-      if (event.event_type === 'task' && !event.all_day) {
+      if (event.event_type === 'task' && !event.all_day && !event.calendar_event) {
         // This is likely a task from the tasks table
         const { error } = await supabase
           .from('tasks')
@@ -127,7 +127,7 @@ export function EventDetailsModal({ open, onOpenChange, event, onEventUpdated }:
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-[500px]">
+      <AlertDialogContent className="max-w-[500px] max-h-[80vh] overflow-y-auto">
         <AlertDialogHeader>
           <AlertDialogTitle className="text-xl">{event?.title}</AlertDialogTitle>
           <div className="flex flex-wrap gap-2 mt-2">

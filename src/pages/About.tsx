@@ -10,17 +10,17 @@ export default function About() {
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100 p-4 md:px-6">
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <div className="bg-creatively-purple rounded-lg w-8 h-8 flex items-center justify-center">
-              <span className="text-white font-bold">C</span>
+            <div className="bg-kulibre-purple rounded-lg w-8 h-8 flex items-center justify-center">
+              <span className="text-white font-bold">K</span>
             </div>
-            <h1 className="text-xl font-bold">Creatively</h1>
+            <h1 className="text-xl font-bold">kulibre</h1>
           </div>
           <nav className="hidden md:flex items-center space-x-6">
-            <Link to="/" className="text-sm font-medium hover:text-creatively-purple transition-colors">Home</Link>
-            <Link to="/about" className="text-sm font-medium text-creatively-purple">About</Link>
-            <Link to="/careers" className="text-sm font-medium hover:text-creatively-purple transition-colors">Careers</Link>
-            <Link to="/blog" className="text-sm font-medium hover:text-creatively-purple transition-colors">Blog</Link>
-            <Link to="/contact" className="text-sm font-medium hover:text-creatively-purple transition-colors">Contact</Link>
+            <Link to="/" className="text-sm font-medium hover:text-kulibre-purple transition-colors">Home</Link>
+            <Link to="/about" className="text-sm font-medium text-kulibre-purple">About</Link>
+            <Link to="/careers" className="text-sm font-medium hover:text-kulibre-purple transition-colors">Careers</Link>
+            <Link to="/blog" className="text-sm font-medium hover:text-kulibre-purple transition-colors">Blog</Link>
+            <Link to="/contact" className="text-sm font-medium hover:text-kulibre-purple transition-colors">Contact</Link>
           </nav>
           <div className="flex items-center space-x-4">
             <Link to="/login">
@@ -35,10 +35,10 @@ export default function About() {
 
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="py-20 md:py-32 bg-gradient-to-b from-creatively-purple/5 to-white">
+        <section className="py-20 md:py-32 bg-gradient-to-b from-kulibre-purple/5 to-white">
           <div className="container mx-auto px-4 text-center">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 tracking-tight">
-              About <span className="text-creatively-purple">Creatively</span>
+              About <span className="text-kulibre-purple">kulibre</span>
             </h1>
             <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
               We're on a mission to transform how creative agencies manage their projects and collaborate with clients.
@@ -53,7 +53,7 @@ export default function About() {
               <h2 className="text-3xl font-bold mb-8">Our Story</h2>
               <div className="prose prose-lg max-w-none">
                 <p>
-                  Creatively was founded in 2022 by a team of designers and developers who were frustrated with the existing project management tools that didn't cater to the unique needs of creative agencies.
+                  kulibre was founded in 2022 by a team of designers and developers who were frustrated with the existing project management tools that didn't cater to the unique needs of creative agencies.
                 </p>
                 <p className="mt-4">
                   Having worked in creative agencies ourselves, we understood the challenges of managing multiple projects, collaborating with team members, and presenting work to clients. We saw an opportunity to build a platform specifically designed for creative workflows.
@@ -67,7 +67,7 @@ export default function About() {
         </section>
 
         {/* Our Values */}
-        <section className="py-16 bg-creatively-gray">
+        <section className="py-16 bg-kulibre-gray">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto">
               <h2 className="text-3xl font-bold mb-8">Our Values</h2>
@@ -109,42 +109,42 @@ export default function About() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div className="text-center">
                   <div className="w-32 h-32 rounded-full bg-gray-200 mx-auto mb-4 overflow-hidden">
-                    <img 
-                      src="https://images.unsplash.com/photo-1568602471122-7832951cc4c5?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=300&h=300&q=80" 
-                      alt="CEO" 
+                    <img
+                      src="https://images.unsplash.com/photo-1568602471122-7832951cc4c5?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=300&h=300&q=80"
+                      alt="CEO"
                       className="w-full h-full object-cover"
                     />
                   </div>
                   <h3 className="text-xl font-semibold">Alex Johnson</h3>
-                  <p className="text-creatively-purple">CEO & Co-Founder</p>
+                  <p className="text-kulibre-purple">CEO & Co-Founder</p>
                   <p className="text-sm text-muted-foreground mt-2">
                     Former design agency director with 15+ years of experience in the creative industry.
                   </p>
                 </div>
                 <div className="text-center">
                   <div className="w-32 h-32 rounded-full bg-gray-200 mx-auto mb-4 overflow-hidden">
-                    <img 
-                      src="https://images.unsplash.com/photo-1580489944761-15a19d654956?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=300&h=300&q=80" 
-                      alt="CTO" 
+                    <img
+                      src="https://images.unsplash.com/photo-1580489944761-15a19d654956?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=300&h=300&q=80"
+                      alt="CTO"
                       className="w-full h-full object-cover"
                     />
                   </div>
                   <h3 className="text-xl font-semibold">Sarah Chen</h3>
-                  <p className="text-creatively-purple">CTO & Co-Founder</p>
+                  <p className="text-kulibre-purple">CTO & Co-Founder</p>
                   <p className="text-sm text-muted-foreground mt-2">
                     Tech leader with a background in building scalable software for creative professionals.
                   </p>
                 </div>
                 <div className="text-center">
                   <div className="w-32 h-32 rounded-full bg-gray-200 mx-auto mb-4 overflow-hidden">
-                    <img 
-                      src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=300&h=300&q=80" 
-                      alt="CPO" 
+                    <img
+                      src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=300&h=300&q=80"
+                      alt="CPO"
                       className="w-full h-full object-cover"
                     />
                   </div>
                   <h3 className="text-xl font-semibold">Michael Rodriguez</h3>
-                  <p className="text-creatively-purple">Chief Product Officer</p>
+                  <p className="text-kulibre-purple">Chief Product Officer</p>
                   <p className="text-sm text-muted-foreground mt-2">
                     Product visionary with experience at leading design software companies.
                   </p>
@@ -155,7 +155,7 @@ export default function About() {
         </section>
 
         {/* CTA Section */}
-        <section className="py-16 bg-creatively-purple text-white">
+        <section className="py-16 bg-kulibre-purple text-white">
           <div className="container mx-auto px-4 text-center">
             <h2 className="text-3xl font-bold mb-4">Join Us on Our Journey</h2>
             <p className="text-xl mb-8 max-w-2xl mx-auto opacity-90">
@@ -168,7 +168,7 @@ export default function About() {
                 </Button>
               </Link>
               <Link to="/contact">
-                <Button size="lg" variant="outline" className="px-8 border-white text-white hover:bg-white hover:text-creatively-purple">
+                <Button size="lg" variant="outline" className="px-8 border-white text-white hover:bg-white hover:text-kulibre-purple">
                   Contact Us
                 </Button>
               </Link>
@@ -219,13 +219,13 @@ export default function About() {
           </div>
           <div className="mt-12 pt-8 border-t border-gray-200 flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center gap-2 mb-4 md:mb-0">
-              <div className="bg-creatively-purple rounded-lg w-8 h-8 flex items-center justify-center">
-                <span className="text-white font-bold">C</span>
+              <div className="bg-kulibre-purple rounded-lg w-8 h-8 flex items-center justify-center">
+                <span className="text-white font-bold">K</span>
               </div>
-              <span className="font-bold">Creatively</span>
+              <span className="font-bold">kulibre</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} Creatively. All rights reserved.
+              © {new Date().getFullYear()} kulibre. All rights reserved.
             </p>
           </div>
         </div>

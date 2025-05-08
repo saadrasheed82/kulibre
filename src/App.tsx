@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import ProjectsPageSimple from "./pages/ProjectsPageSimple";
 import ProjectDetailsPage from "./pages/ProjectDetailsPage";
 import Calendar from "./pages/Calendar";
+import CalendarTest from "./pages/CalendarTest";
 import TasksPage from "./pages/TasksPage";
 import TeamPage from "./pages/TeamPage";
 import Files from "./pages/Files";

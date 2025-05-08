@@ -11,10 +11,10 @@ export function Sidebar({ className }: SidebarProps) {
   return (
     <div className={cn("w-64 border-r h-screen p-4 hidden md:block", className)}>
       <div className="flex items-center gap-2 mb-8">
-        <div className="bg-creatively-purple rounded-lg w-8 h-8 flex items-center justify-center">
-          <span className="text-white font-bold">C</span>
+        <div className="bg-kulibre-purple rounded-lg w-8 h-8 flex items-center justify-center">
+          <span className="text-white font-bold">K</span>
         </div>
-        <h1 className="text-xl font-bold">Creatively</h1>
+        <h1 className="text-xl font-bold">kulibre</h1>
       </div>
 
       <nav className="space-y-1">
@@ -44,8 +44,8 @@ function NavItem({ icon, href, label, active }: NavItemProps) {
       className={cn(
         "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
         active
-          ? "bg-creatively-purple text-white"
-          : "text-muted-foreground hover:bg-creatively-purple/10 hover:text-foreground"
+          ? "bg-kulibre-purple text-white"
+          : "text-muted-foreground hover:bg-kulibre-purple/10 hover:text-foreground"
       )}
     >
       {icon}

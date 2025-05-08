@@ -63,11 +63,11 @@ export function Header() {
       <div className="flex items-center gap-4">
         <div className="relative">
           <Bell className="h-5 w-5 text-muted-foreground hover:text-foreground cursor-pointer" />
-          <span className="absolute -top-1 -right-1 bg-creatively-purple text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+          <span className="absolute -top-1 -right-1 bg-kulibre-purple text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
             3
           </span>
         </div>
-        <div className="h-9 w-9 rounded-full bg-creatively-purple flex items-center justify-center text-white font-medium">
+        <div className="h-9 w-9 rounded-full bg-kulibre-purple flex items-center justify-center text-white font-medium">
           {userInitials}
         </div>
       </div>

@@ -37,30 +37,22 @@ export function InviteMemberModal({ open, onOpenChange, onInvited }: InviteMembe
 
   console.log("InviteMemberModal rendered with open state:", open);
 
-  // Invite member mutation
+  // Invite member mutation - modified to create a profile directly
   const inviteMemberMutation = useMutation({
     mutationFn: async () => {
-      console.log("Starting invitation mutation with values:", { email, role });
+      console.log("Starting member creation with values:", { email, role });
       setIsSubmitting(true);
 
       try {
-        // Generate a unique token for the invitation
-        const token = uuidv4();
-        console.log("Generated token:", token);
-
-        // Set expiration date (7 days from now)
-        const expiresAt = addDays(new Date(), 7).toISOString();
-        console.log("Expiration date:", expiresAt);
-
-        // Map our role values to the user_role enum values in the database
-        let dbRole = "member";
+        // Map our role values to the database role values
+        let dbRole = "rider";
         switch (role) {
           case "admin":
             dbRole = "admin";
             break;
           case "manager":
           case "member":
-            dbRole = "team_member";
+            dbRole = "rider";
             break;
           case "viewer":
             dbRole = "client";
@@ -68,36 +60,37 @@ export function InviteMemberModal({ open, onOpenChange, onInvited }: InviteMembe
         }
         console.log("Mapped role:", dbRole);
 
-        // Create invitation record
-        console.log("Creating invitation record with data:", {
-          email,
-          role: dbRole,
-          token,
-          expires_at: expiresAt,
-        });
+        // Extract name from email (as a placeholder)
+        const emailName = email.split('@')[0];
+        const firstName = emailName || 'New';
+        const lastName = 'Member';
 
-        const { data: invitation, error: invitationError } = await supabase
-          .from('team_invitations')
+        // Create team member directly
+        const { data: teamMember, error: teamMemberError } = await supabase
+          .from('team_members')
           .insert({
-            email,
+            id: uuidv4(), // Generate a new UUID for the team member
+            full_name: `${firstName} ${lastName}`.trim(),
+            first_name: firstName,
+            last_name: lastName,
+            email: email, // Store the actual email
             role: dbRole,
-            token,
-            expires_at: expiresAt,
+            active: true
           })
           .select()
           .single();
 
-        console.log("Supabase response:", { invitation, invitationError });
+        console.log("Supabase response:", { teamMember, teamMemberError });
 
-        if (invitationError) {
-          console.error("Error creating invitation:", invitationError);
-          throw invitationError;
+        if (teamMemberError) {
+          console.error("Error creating team member:", teamMemberError);
+          throw teamMemberError;
         }
 
-        console.log("Invitation created successfully:", invitation);
-        return invitation;
+        console.log("Team member created successfully:", teamMember);
+        return teamMember;
       } catch (error) {
-        console.error("Error inviting member:", error);
+        console.error("Error adding member:", error);
         throw error;
       } finally {
         setIsSubmitting(false);
@@ -106,7 +99,7 @@ export function InviteMemberModal({ open, onOpenChange, onInvited }: InviteMembe
     onSuccess: () => {
       toast({
         title: "Success",
-        description: "Invitation sent successfully.",
+        description: "Team member added successfully.",
       });
       setEmail("");
       setRole("member");
@@ -117,7 +110,7 @@ export function InviteMemberModal({ open, onOpenChange, onInvited }: InviteMembe
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to send invitation. Please try again.",
+        description: error.message || "Failed to add team member. Please try again.",
         variant: "destructive",
       });
     },
@@ -160,7 +153,7 @@ export function InviteMemberModal({ open, onOpenChange, onInvited }: InviteMembe
     >
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Invite Team Member</DialogTitle>
+          <DialogTitle>Add Team Member</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -175,7 +168,7 @@ export function InviteMemberModal({ open, onOpenChange, onInvited }: InviteMembe
               required
             />
             <p className="text-sm text-muted-foreground">
-              An invitation will be sent to this email address.
+              This email will be associated with the new team member.
             </p>
           </div>
 
@@ -212,7 +205,7 @@ export function InviteMemberModal({ open, onOpenChange, onInvited }: InviteMembe
               type="submit"
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Sending..." : "Send Invitation"}
+              {isSubmitting ? "Adding..." : "Add Member"}
             </Button>
           </DialogFooter>
         </form>

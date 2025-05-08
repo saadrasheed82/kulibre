@@ -221,6 +221,8 @@ export interface Database {
         Row: {
           id: string
           full_name: string
+          first_name: string | null
+          last_name: string | null
           avatar_url: string | null
           website: string | null
           email: string | null
@@ -235,6 +237,8 @@ export interface Database {
         Insert: {
           id: string
           full_name?: string
+          first_name?: string | null
+          last_name?: string | null
           avatar_url?: string | null
           website?: string | null
           email?: string | null
@@ -249,6 +253,8 @@ export interface Database {
         Update: {
           id?: string
           full_name?: string
+          first_name?: string | null
+          last_name?: string | null
           avatar_url?: string | null
           website?: string | null
           email?: string | null
@@ -268,6 +274,51 @@ export interface Database {
             referencedColumns: ["id"]
           }
         ]
+      }
+      team_members: {
+        Row: {
+          id: string
+          full_name: string
+          first_name: string | null
+          last_name: string | null
+          avatar_url: string | null
+          email: string | null
+          role: string | null
+          job_title: string | null
+          department: string | null
+          active: boolean | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          full_name?: string
+          first_name?: string | null
+          last_name?: string | null
+          avatar_url?: string | null
+          email?: string | null
+          role?: string | null
+          job_title?: string | null
+          department?: string | null
+          active?: boolean | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          full_name?: string
+          first_name?: string | null
+          last_name?: string | null
+          avatar_url?: string | null
+          email?: string | null
+          role?: string | null
+          job_title?: string | null
+          department?: string | null
+          active?: boolean | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       project_files: {
         Row: {

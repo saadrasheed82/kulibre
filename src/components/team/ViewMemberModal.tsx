@@ -54,16 +54,23 @@ interface ViewMemberModalProps {
 export function ViewMemberModal({ open, onOpenChange, member }: ViewMemberModalProps) {
   const [activeTab, setActiveTab] = useState("overview");
 
-  // Fetch member projects
+  // Fetch member projects from project_members table
   const { data: memberProjects, isLoading: isLoadingProjects } = useQuery({
     queryKey: ['member-projects', member.id],
     queryFn: async () => {
       try {
-        // Only fetch projects for actual profiles, not invitations
-        if (member.isInvitation) {
+        // Check if project_members table exists
+        const { error: tableCheckError } = await supabase
+          .from('project_members')
+          .select('user_id')
+          .limit(1);
+
+        if (tableCheckError) {
+          console.log("Project members table may not exist:", tableCheckError);
           return [];
         }
 
+        // Fetch projects this member is assigned to
         const { data, error } = await supabase
           .from('project_members')
           .select(`
@@ -79,14 +86,18 @@ export function ViewMemberModal({ open, onOpenChange, member }: ViewMemberModalP
           `)
           .eq('user_id', member.id);
 
-        if (error) throw error;
+        if (error) {
+          console.error("Error fetching member projects:", error);
+          return [];
+        }
+
         return data || [];
       } catch (error) {
         console.error("Error fetching member projects:", error);
         return [];
       }
     },
-    enabled: open && !member.isInvitation, // Only fetch when modal is open and member is not an invitation
+    enabled: open, // Only fetch when modal is open
   });
 
   // Get status icon
@@ -176,7 +187,7 @@ export function ViewMemberModal({ open, onOpenChange, member }: ViewMemberModalP
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="projects">Projects</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="overview" className="space-y-4 mt-4">
             <Card>
               <CardHeader className="pb-2">
@@ -213,7 +224,7 @@ export function ViewMemberModal({ open, onOpenChange, member }: ViewMemberModalP
               </CardContent>
             </Card>
           </TabsContent>
-          
+
           <TabsContent value="projects" className="mt-4">
             {member.isInvitation ? (
               <Card>

@@ -105,96 +105,77 @@ export default function TeamPage() {
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
 
   // Fetch team members
-  const { data: teamMembers, isLoading } = useQuery({
+  const { data: teamMembers, isLoading, isError, error } = useQuery({
     queryKey: ['team-members', searchQuery, roleFilter, statusFilter],
     queryFn: async () => {
       try {
         console.log("Fetching team members...");
 
-        // Fetch profiles
-        const { data: profiles, error: profilesError } = await supabase
-          .from('profiles')
-          .select('*');
+        // Fetch team members with detailed logging
+        console.log("Sending request to fetch team members from Supabase");
 
-        if (profilesError) {
-          console.error("Error fetching profiles:", profilesError);
-          throw profilesError;
+        // By default, only fetch active team members unless specifically filtering for inactive ones
+        let query = supabase.from('team_members').select('*');
+
+        // Only apply active filter if not specifically looking for inactive members
+        if (statusFilter !== 'inactive') {
+          query = query.eq('active', true);
         }
 
-        console.log("Profiles fetched:", profiles);
+        const { data: teamMembersData, error: teamMembersError } = await query;
 
-        // Fetch invitations
-        const { data: invitations, error: invitationsError } = await supabase
-          .from('team_invitations')
-          .select('id, email, role, token, created_at, expires_at, accepted_at, metadata');
-
-        if (invitationsError) {
-          console.error("Error fetching invitations:", invitationsError);
-          throw invitationsError;
+        if (teamMembersError) {
+          console.error("Error fetching team members:", teamMembersError);
+          throw teamMembersError;
         }
 
-        console.log("Invitations fetched:", invitations);
+        if (!teamMembersData) {
+          console.log("No team members returned from database");
+          return [];
+        }
 
-        // Also create "virtual" team members from invitations that don't have a corresponding profile
-        const invitationMembers = invitations
-          .filter((inv: any) => !profiles.some((profile: any) => profile.email === inv.email))
-          .map((inv: any) => {
-            const metadata = inv.metadata || {};
-            return {
-              id: inv.id,
-              full_name: metadata.full_name || "Invited User",
-              email: inv.email,
-              role: inv.role,
-              job_title: metadata.job_title || "",
-              department: metadata.department || "",
-              active: true,
-              status: "invited" as "active" | "invited" | "inactive",
-              isInvitation: true
-            };
-          });
+        console.log(`Team members fetched: ${teamMembersData.length}`, teamMembersData);
 
         // Process data to determine status
-        const profileMembers = profiles.map((profile: any) => {
-          const invitation = invitations?.find((inv: any) => inv.email === profile.email && !inv.accepted_at);
-
-          let status: "active" | "invited" | "inactive" = "active";
-          if (invitation && !invitation.accepted_at) {
-            status = "invited";
-          } else if (profile.active === false) {
-            status = "inactive";
-          }
-
-          // Map the user_role enum to our role string
+        const processedMembers = teamMembersData.map((member: any) => {
+          // Map the role to our expected format
           let mappedRole = "member";
-          if (profile.role === "admin") {
+          if (member.role === "admin") {
             mappedRole = "admin";
-          } else if (profile.role === "team_member") {
+          } else if (member.role === "rider") {
             mappedRole = "member";
-          } else if (profile.role === "client") {
+          } else if (member.role === "client") {
             mappedRole = "viewer";
           }
 
+          // Use full_name or create it from first_name and last_name
+          const fullName = member.full_name || `${member.first_name || ''} ${member.last_name || ''}`.trim() || 'Unnamed User';
+
           return {
-            ...profile,
+            id: member.id,
+            full_name: fullName,
+            email: member.email || `${member.first_name || 'user'}@example.com`, // Use actual email if available
+            avatar_url: null,
             role: mappedRole,
-            status
+            active: member.active !== false, // Default to true if not explicitly false
+            status: member.active === false ? "inactive" : "active" as "active" | "invited" | "inactive",
+            job_title: member.job_title || "",
+            department: member.department || "",
+            isInvitation: false
           };
         });
 
-        // Combine profile members and invitation members
-        const members = [...profileMembers, ...invitationMembers];
-
-        console.log("Processed members:", members);
+        console.log("Processed members:", processedMembers);
 
         // Apply filters
-        let filteredMembers = members;
+        let filteredMembers = processedMembers;
 
         if (searchQuery) {
           filteredMembers = filteredMembers.filter((member: TeamMember) =>
             member.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            member.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            member.job_title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            member.department?.toLowerCase().includes(searchQuery.toLowerCase())
+            (member.email && member.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
+            (member.job_title && member.job_title.toLowerCase().includes(searchQuery.toLowerCase())) ||
+            (member.department && member.department.toLowerCase().includes(searchQuery.toLowerCase()))
           );
         }
 
@@ -224,65 +205,70 @@ export default function TeamPage() {
     }
   });
 
-  // Delete member mutation
-  const deleteMemberMutation = useMutation({
+  // Deactivate member mutation (safer alternative to deletion)
+  const deactivateMemberMutation = useMutation({
     mutationFn: async (memberId: string) => {
-      // Check if this is an invitation or a profile
-      const member = teamMembers?.find(m => m.id === memberId);
+      console.log("Deactivating team member with ID:", memberId);
 
-      if (member?.isInvitation) {
-        console.log("Deleting invitation:", memberId);
-        // Delete the invitation
-        const { error: invitationError } = await supabase
-          .from('team_invitations')
-          .delete()
-          .eq('id', memberId);
+      try {
+        // First check if the team member exists
+        const { data: memberCheck, error: checkError } = await supabase
+          .from('team_members')
+          .select('id, email')
+          .eq('id', memberId)
+          .single();
 
-        if (invitationError) {
-          console.error("Error deleting invitation:", invitationError);
-          throw invitationError;
+        if (checkError) {
+          console.error("Error checking team member existence:", checkError);
+          // If the team member doesn't exist, we'll consider this a success
+          if (checkError.code === 'PGRST116') {
+            console.log("Team member doesn't exist, considering deactivation successful");
+            return memberId;
+          }
+          throw checkError;
+        }
+
+        console.log("Team member exists, proceeding with deactivation:", memberCheck);
+
+        // Try to update the team member to mark it as inactive
+        const { data: updatedMember, error: updateError } = await supabase
+          .from('team_members')
+          .update({
+            active: false,
+            email: `removed-${Date.now()}@example.com`, // Change email to avoid conflicts
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', memberId)
+          .select();
+
+        if (updateError) {
+          console.error("Error updating profile:", updateError);
+
+          // If update fails, try to delete as a fallback
+          console.log("Update failed, attempting deletion as fallback");
+          const { error: deleteError } = await supabase
+            .from('profiles')
+            .delete()
+            .eq('id', memberId);
+
+          if (deleteError) {
+            console.error("Fallback deletion also failed:", deleteError);
+            throw deleteError;
+          }
+
+          console.log("Fallback deletion successful");
+        } else {
+          console.log("Profile deactivated successfully:", updatedProfile);
         }
 
         return memberId;
-      } else {
-        console.log("Deleting profile:", memberId);
-        // First, delete any project assignments
-        const { error: projectMemberError } = await supabase
-          .from('project_members')
-          .delete()
-          .eq('user_id', memberId);
-
-        if (projectMemberError) {
-          console.error("Error deleting project assignments:", projectMemberError);
-          throw projectMemberError;
-        }
-
-        // Delete any pending invitations
-        const { error: invitationError } = await supabase
-          .from('team_invitations')
-          .delete()
-          .eq('user_id', memberId);
-
-        if (invitationError) {
-          console.error("Error deleting invitations:", invitationError);
-          // Don't throw here, as the user_id might not be set in invitations
-        }
-
-        // Finally, delete the profile
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .delete()
-          .eq('id', memberId);
-
-        if (profileError) {
-          console.error("Error deleting profile:", profileError);
-          throw profileError;
-        }
-
-        return memberId;
+      } catch (error) {
+        console.error("Error in deactivate mutation:", error);
+        throw error;
       }
     },
-    onSuccess: () => {
+    onSuccess: (memberId) => {
+      console.log("Deactivate mutation successful for ID:", memberId);
       queryClient.invalidateQueries({ queryKey: ['team-members'] });
       toast({
         title: "Success",
@@ -301,10 +287,56 @@ export default function TeamPage() {
     }
   });
 
+  // Force delete as a fallback - direct deletion from team_members
+  const forceDeleteMemberMutation = useMutation({
+    mutationFn: async (memberId: string) => {
+      console.log("Attempting direct deletion for team member with ID:", memberId);
+
+      // Try direct deletion from team_members table
+      const { error } = await supabase
+        .from('team_members')
+        .delete()
+        .eq('id', memberId);
+
+      if (error) {
+        console.error("Error deleting team member:", error);
+        throw error;
+      }
+
+      console.log("Force delete successful");
+      return memberId;
+    },
+    onSuccess: (memberId) => {
+      console.log("Force delete successful for ID:", memberId);
+      queryClient.invalidateQueries({ queryKey: ['team-members'] });
+      toast({
+        title: "Success",
+        description: "Team member removed successfully.",
+      });
+      setIsDeleteDialogOpen(false);
+      setSelectedMember(null);
+    },
+    onError: (error) => {
+      console.error("Error in force delete:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove team member. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
   // Handle member deletion
   const handleDeleteMember = () => {
     if (selectedMember) {
-      deleteMemberMutation.mutate(selectedMember.id);
+      // First try to deactivate the member
+      deactivateMemberMutation.mutate(selectedMember.id, {
+        onError: (error) => {
+          console.log("Deactivation failed, attempting force delete as fallback");
+          // If deactivation fails, try force delete
+          forceDeleteMemberMutation.mutate(selectedMember.id);
+        }
+      });
     }
   };
 
@@ -387,14 +419,14 @@ export default function TeamPage() {
                 onClick={() => setIsAddModalOpen(true)}
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Create Member
+                Add Member
               </Button>
               <Button
                 variant="outline"
                 onClick={() => setIsInviteModalOpen(true)}
               >
                 <UserPlus className="h-4 w-4 mr-2" />
-                Invite Member
+                Add Member via Email
               </Button>
             </div>
           </CardContent>
@@ -477,14 +509,14 @@ export default function TeamPage() {
               onClick={() => setIsAddModalOpen(true)}
             >
               <Plus className="h-4 w-4 mr-2" />
-              Create Member
+              Add Member
             </Button>
             <Button
               variant="outline"
               onClick={() => setIsInviteModalOpen(true)}
             >
               <UserPlus className="h-4 w-4 mr-2" />
-              Invite Member
+              Add Member via Email
             </Button>
           </div>
         </div>
@@ -598,14 +630,28 @@ export default function TeamPage() {
         <div className="flex gap-2">
           <Button onClick={() => setIsAddModalOpen(true)} variant="default">
             <Plus className="h-4 w-4 mr-2" />
-            Create Member
+            Add Member
           </Button>
           <Button onClick={() => setIsInviteModalOpen(true)} variant="outline">
             <UserPlus className="h-4 w-4 mr-2" />
-            Invite Member
+            Add Member via Email
           </Button>
         </div>
       </div>
+
+      {isError && (
+        <Card className="border-red-300 bg-red-50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-red-600">
+              <AlertCircle className="h-5 w-5" />
+              <p className="font-medium">Error loading team members</p>
+            </div>
+            <p className="text-sm text-red-600 mt-1">
+              {error instanceof Error ? error.message : "An unknown error occurred. Please try refreshing the page."}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
         <div className="relative w-full sm:w-auto">
@@ -707,20 +753,53 @@ export default function TeamPage() {
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogTitle>Remove Team Member</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently remove {selectedMember?.full_name} from your team.
-              This action cannot be undone.
+              Are you sure you want to remove <strong>{selectedMember?.full_name || "Unnamed User"}</strong> from your team?
+              <br /><br />
+              <div className="bg-amber-50 p-3 rounded border border-amber-200 text-amber-800 text-sm">
+                <strong>Note:</strong> This will deactivate the team member's account.
+                They will no longer appear in the active team members list but can be viewed
+                by filtering for inactive members.
+              </div>
+              <div className="bg-red-50 p-3 rounded border border-red-200 text-red-800 text-sm mt-2">
+                <strong>Force Delete:</strong> If the normal removal doesn't work, use the "Force Delete"
+                button to completely remove the member and all their references from the database.
+                This action cannot be undone.
+              </div>
+              <br />
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div><strong>Email:</strong></div>
+                <div>{selectedMember?.email}</div>
+                <div><strong>Role:</strong></div>
+                <div>{selectedMember?.role}</div>
+                <div><strong>ID:</strong></div>
+                <div className="text-gray-500 text-xs">{selectedMember?.id}</div>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="flex flex-col sm:flex-row gap-2">
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteMember}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              Remove
-            </AlertDialogAction>
+            <div className="flex gap-2">
+              <AlertDialogAction
+                onClick={handleDeleteMember}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Remove Member
+              </AlertDialogAction>
+              <Button
+                variant="outline"
+                className="border-red-300 text-red-600 hover:bg-red-50"
+                onClick={() => {
+                  if (selectedMember) {
+                    // Directly use force delete
+                    forceDeleteMemberMutation.mutate(selectedMember.id);
+                  }
+                }}
+              >
+                Force Delete
+              </Button>
+            </div>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

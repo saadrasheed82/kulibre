@@ -10,17 +10,17 @@ export default function Documentation() {
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-100 p-4 md:px-6">
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <div className="bg-creatively-purple rounded-lg w-8 h-8 flex items-center justify-center">
-              <span className="text-white font-bold">C</span>
+            <div className="bg-kulibre-purple rounded-lg w-8 h-8 flex items-center justify-center">
+              <span className="text-white font-bold">K</span>
             </div>
-            <h1 className="text-xl font-bold">Creatively</h1>
+            <h1 className="text-xl font-bold">kulibre</h1>
           </div>
           <nav className="hidden md:flex items-center space-x-6">
-            <Link to="/" className="text-sm font-medium hover:text-creatively-purple transition-colors">Home</Link>
-            <Link to="/about" className="text-sm font-medium hover:text-creatively-purple transition-colors">About</Link>
-            <Link to="/careers" className="text-sm font-medium hover:text-creatively-purple transition-colors">Careers</Link>
-            <Link to="/blog" className="text-sm font-medium hover:text-creatively-purple transition-colors">Blog</Link>
-            <Link to="/contact" className="text-sm font-medium hover:text-creatively-purple transition-colors">Contact</Link>
+            <Link to="/" className="text-sm font-medium hover:text-kulibre-purple transition-colors">Home</Link>
+            <Link to="/about" className="text-sm font-medium hover:text-kulibre-purple transition-colors">About</Link>
+            <Link to="/careers" className="text-sm font-medium hover:text-kulibre-purple transition-colors">Careers</Link>
+            <Link to="/blog" className="text-sm font-medium hover:text-kulibre-purple transition-colors">Blog</Link>
+            <Link to="/contact" className="text-sm font-medium hover:text-kulibre-purple transition-colors">Contact</Link>
           </nav>
           <div className="flex items-center space-x-4">
             <Link to="/login">
@@ -35,20 +35,20 @@ export default function Documentation() {
 
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="py-20 md:py-32 bg-gradient-to-b from-creatively-purple/5 to-white">
+        <section className="py-20 md:py-32 bg-gradient-to-b from-kulibre-purple/5 to-white">
           <div className="container mx-auto px-4 text-center">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 tracking-tight">
-              <span className="text-creatively-purple">Documentation</span>
+              <span className="text-kulibre-purple">Documentation</span>
             </h1>
             <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
-              Everything you need to know about using Creatively to manage your creative projects.
+              Everything you need to know about using kulibre to manage your creative projects.
             </p>
             <div className="max-w-2xl mx-auto relative">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-                <input 
-                  type="text" 
-                  placeholder="Search documentation..." 
+                <input
+                  type="text"
+                  placeholder="Search documentation..."
                   className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-creatively-purple focus:border-transparent"
                 />
               </div>

@@ -16,10 +16,10 @@ export function Layout({ children }: LayoutProps) {
         <div className="flex items-center gap-2 md:hidden p-4 border-b">
           <MobileNavigation />
           <div className="flex items-center gap-2">
-            <div className="bg-creatively-purple rounded-lg w-8 h-8 flex items-center justify-center">
-              <span className="text-white font-bold">C</span>
+            <div className="bg-kulibre-purple rounded-lg w-8 h-8 flex items-center justify-center">
+              <span className="text-white font-bold">K</span>
             </div>
-            <h1 className="text-xl font-bold">Creatively</h1>
+            <h1 className="text-xl font-bold">kulibre</h1>
           </div>
         </div>
         <Header />

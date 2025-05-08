@@ -174,7 +174,23 @@ export function NewEventModal({
   // Update modal title based on whether we're editing or creating
   useEffect(() => {
     setModalTitle(isEditing ? "Edit Event" : "Add New Event");
-  }, [isEditing]);
+
+    // Reset form with event data when editing mode changes or event changes
+    if (isEditing && event) {
+      form.reset({
+        title: event.title || "",
+        eventType: event.event_type || "task",
+        projectId: event.project_id || "",
+        startDate: event.start_date ? new Date(event.start_date) : new Date(),
+        startTime: event.start_date && !event.all_day ? format(new Date(event.start_date), "HH:mm") : "09:00",
+        endDate: event.end_date ? new Date(event.end_date) : undefined,
+        endTime: event.end_date && !event.all_day ? format(new Date(event.end_date), "HH:mm") : "10:00",
+        allDay: event.all_day || false,
+        assignedMembers: event.attendees ? event.attendees.map((a: any) => a.user_id) : [],
+        description: event.description || "",
+      });
+    }
+  }, [isEditing, event, form]);
 
   const watchAllDay = form.watch("allDay");
 
@@ -210,22 +226,47 @@ export function NewEventModal({
       }
 
       if (isEditing && event?.id) {
-        // Update existing event
-        const { error: eventError } = await supabase
-          .from('calendar_events')
-          .update({
-            title: values.title,
-            description: values.description,
-            event_type: values.eventType,
-            start_date: startDateTime.toISOString(),
-            end_date: endDateTime ? endDateTime.toISOString() : null,
-            all_day: values.allDay,
-            project_id: values.projectId && values.projectId !== "none" ? values.projectId : null,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', event.id);
+        // Check if this is a task being converted to a calendar event
+        if (event.is_task_conversion) {
+          // Insert as a new calendar event
+          const { data: eventData, error: eventError } = await supabase
+            .from('calendar_events')
+            .insert([{
+              title: values.title,
+              description: values.description,
+              event_type: values.eventType,
+              start_date: startDateTime.toISOString(),
+              end_date: endDateTime ? endDateTime.toISOString() : null,
+              all_day: values.allDay,
+              project_id: values.projectId && values.projectId !== "none" ? values.projectId : null,
+              created_by: user.id,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            }])
+            .select();
 
-        if (eventError) throw eventError;
+          if (eventError) throw eventError;
+
+          // Use the new event ID for attendees
+          event.id = eventData[0].id;
+        } else {
+          // Update existing calendar event
+          const { error: eventError } = await supabase
+            .from('calendar_events')
+            .update({
+              title: values.title,
+              description: values.description,
+              event_type: values.eventType,
+              start_date: startDateTime.toISOString(),
+              end_date: endDateTime ? endDateTime.toISOString() : null,
+              all_day: values.allDay,
+              project_id: values.projectId && values.projectId !== "none" ? values.projectId : null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', event.id);
+
+          if (eventError) throw eventError;
+        }
 
         // Handle attendees for the updated event
         if (values.assignedMembers.length > 0) {
@@ -335,7 +376,7 @@ export function NewEventModal({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-[500px] max-h-[90vh] overflow-y-auto">
+      <AlertDialogContent className="max-w-[500px] max-h-[80vh] overflow-y-auto">
         {isAuthenticated === null ? (
           <div className="py-8 text-center">
             <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
@@ -352,7 +393,7 @@ export function NewEventModal({
               </AlertDialogDescription>
             </AlertDialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
             <FormField
               control={form.control}
               name="title"
@@ -360,7 +401,7 @@ export function NewEventModal({
                 <FormItem>
                   <FormLabel>Event Title</FormLabel>
                   <FormControl>
-                    <Input placeholder="Event Title" className="h-8" {...field} />
+                    <Input placeholder="Event Title" className="h-7" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -375,7 +416,7 @@ export function NewEventModal({
                     <FormLabel>Event Type</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
-                        <SelectTrigger className="h-8">
+                        <SelectTrigger className="h-7">
                           <SelectValue placeholder="Select event type" />
                         </SelectTrigger>
                       </FormControl>
@@ -399,7 +440,7 @@ export function NewEventModal({
                     <FormLabel>Related Project</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value || "none"}>
                       <FormControl>
-                        <SelectTrigger className="h-8">
+                        <SelectTrigger className="h-7">
                           <SelectValue placeholder="Select project" />
                         </SelectTrigger>
                       </FormControl>
@@ -422,7 +463,7 @@ export function NewEventModal({
               control={form.control}
               name="allDay"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-2">
+                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-1">
                   <FormControl>
                     <Checkbox
                       checked={field.value}
@@ -450,7 +491,7 @@ export function NewEventModal({
                           <Button
                             variant={"outline"}
                             className={cn(
-                              "w-full pl-3 text-left font-normal h-8",
+                              "w-full pl-3 text-left font-normal h-7",
                               !field.value && "text-muted-foreground"
                             )}
                           >
@@ -487,7 +528,7 @@ export function NewEventModal({
                       <div className="flex items-center">
                         <Clock className="mr-2 h-4 w-4 opacity-50" />
                         <FormControl>
-                          <Input type="time" className="h-8" {...field} />
+                          <Input type="time" className="h-7" {...field} />
                         </FormControl>
                       </div>
                       <FormMessage />
@@ -510,7 +551,7 @@ export function NewEventModal({
                           <Button
                             variant={"outline"}
                             className={cn(
-                              "w-full pl-3 text-left font-normal h-8",
+                              "w-full pl-3 text-left font-normal h-7",
                               !field.value && "text-muted-foreground"
                             )}
                           >
@@ -550,7 +591,7 @@ export function NewEventModal({
                       <div className="flex items-center">
                         <Clock className="mr-2 h-4 w-4 opacity-50" />
                         <FormControl>
-                          <Input type="time" className="h-8" {...field} />
+                          <Input type="time" className="h-7" {...field} />
                         </FormControl>
                       </div>
                       <FormMessage />
@@ -577,7 +618,7 @@ export function NewEventModal({
                     }}
                   >
                     <FormControl>
-                      <SelectTrigger className="h-8">
+                      <SelectTrigger className="h-7">
                         <SelectValue placeholder={
                           field.value.length > 0
                             ? `${field.value.length} attendee(s) selected`
@@ -621,7 +662,7 @@ export function NewEventModal({
                   <FormControl>
                     <Textarea
                       placeholder="Event description"
-                      className="resize-none h-20"
+                      className="resize-none h-16"
                       {...field}
                     />
                   </FormControl>

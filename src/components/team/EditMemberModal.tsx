@@ -89,30 +89,36 @@ export function EditMemberModal({ open, onOpenChange, member, onUpdated }: EditM
       try {
         console.log("Updating member with values:", values);
 
-        // Map our role values to the user_role enum values in the database
-        let dbRole = "team_member";
+        // Map our role values to the database role values
+        let dbRole = "rider";
         switch (values.role) {
           case "admin":
             dbRole = "admin";
             break;
           case "manager":
           case "member":
-            dbRole = "team_member";
+            dbRole = "rider";
             break;
           case "viewer":
             dbRole = "client";
             break;
         }
 
-        // Update profile
+        // Split the full name into first and last name
+        const nameParts = values.full_name.split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+
+        // Update team member
         const { data, error } = await supabase
-          .from('profiles')
+          .from('team_members')
           .update({
             full_name: values.full_name,
-            email: values.email,
+            first_name: firstName,
+            last_name: lastName,
             role: dbRole,
-            job_title: values.job_title,
-            department: values.department,
+            job_title: values.job_title || null,
+            department: values.department || null,
             active: values.active,
             updated_at: new Date().toISOString(),
           })
@@ -121,11 +127,11 @@ export function EditMemberModal({ open, onOpenChange, member, onUpdated }: EditM
           .single();
 
         if (error) {
-          console.error("Error updating profile:", error);
+          console.error("Error updating team member:", error);
           throw error;
         }
 
-        console.log("Profile updated successfully:", data);
+        console.log("Team member updated successfully:", data);
         return data;
       } catch (error) {
         console.error("Error updating member:", error);
