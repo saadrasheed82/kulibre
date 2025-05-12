@@ -510,6 +510,7 @@ export function NewEventModal({
                           selected={field.value}
                           onSelect={field.onChange}
                           initialFocus
+                          className="calendar-fix"
                         />
                       </PopoverContent>
                     </Popover>
@@ -570,6 +571,7 @@ export function NewEventModal({
                           selected={field.value}
                           onSelect={field.onChange}
                           initialFocus
+                          className="calendar-fix"
                           disabled={(date) =>
                             date < form.getValues("startDate")
                           }

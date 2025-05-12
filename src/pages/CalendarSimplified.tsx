@@ -1,16 +1,17 @@
 import { useState } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 
-export default function CalendarTest() {
+export default function CalendarSimplified() {
   const [date, setDate] = useState<Date | undefined>(new Date());
 
   return (
     <div className="space-y-8 p-8">
       <div>
-        <h1 className="text-3xl font-bold">Calendar Test</h1>
-        <p className="text-muted-foreground mt-1">Testing the calendar component</p>
+        <h1 className="text-3xl font-bold">Simplified Calendar</h1>
+        <p className="text-muted-foreground mt-1">A basic calendar view</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-[350px_1fr] gap-6">
@@ -44,8 +45,14 @@ export default function CalendarTest() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p>This is a test calendar page with just the date picker.</p>
+            <p>This is a simplified calendar page.</p>
             <p className="mt-4">If you can see this calendar, the component is working correctly.</p>
+            <Button
+              onClick={() => window.location.href = '/calendar'}
+              className="mt-4"
+            >
+              Go to Full Calendar
+            </Button>
           </CardContent>
         </Card>
       </div>

@@ -1249,6 +1249,19 @@ function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
                     selected={newTask.due_date}
                     onSelect={(date) => setNewTask({ ...newTask, due_date: date })}
                     initialFocus
+                    className="calendar-fix"
+                    components={{
+                      Day: ({ date: dayDate, ...props }) => {
+                        return (
+                          <div
+                            {...props}
+                            data-day
+                          >
+                            {dayDate.getDate()}
+                          </div>
+                        );
+                      }
+                    }}
                   />
                 </PopoverContent>
               </Popover>
@@ -1367,6 +1380,19 @@ function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
                         due_date: date ? format(date, 'yyyy-MM-dd') : null
                       })}
                       initialFocus
+                      className="calendar-fix"
+                      components={{
+                        Day: ({ date: dayDate, ...props }) => {
+                          return (
+                            <div
+                              {...props}
+                              data-day
+                            >
+                              {dayDate.getDate()}
+                            </div>
+                          );
+                        }
+                      }}
                     />
                   </PopoverContent>
                 </Popover>

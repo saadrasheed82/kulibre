@@ -11,7 +11,10 @@ import ProjectsPageSimple from "./pages/ProjectsPageSimple";
 import ProjectDetailsPage from "./pages/ProjectDetailsPage";
 import Calendar from "./pages/Calendar";
 import CalendarTest from "./pages/CalendarTest";
+import CalendarSimplified from "./pages/CalendarSimplified";
 import TasksPage from "./pages/TasksPage";
+import TasksPageDebug from "./pages/TasksPage.debug";
+import TasksPageNew from "./pages/TasksPage.new";
 import TeamPage from "./pages/TeamPage";
 import Files from "./pages/Files";
 import Settings from "./pages/Settings";
@@ -71,9 +74,11 @@ export default function App() {
             <Route path="/dashboard" element={<Layout><Index /></Layout>} />
             <Route path="/projects" element={<Layout><ProjectsPageSimple /></Layout>} />
             <Route path="/project/:id" element={<Layout><ProjectDetailsPage /></Layout>} />
-            <Route path="/tasks" element={<Layout><TasksPage /></Layout>} />
+            <Route path="/tasks" element={<Layout><TasksPageNew /></Layout>} />
             <Route path="/team" element={<Layout><TeamPage /></Layout>} />
             <Route path="/calendar" element={<Layout><Calendar /></Layout>} />
+            <Route path="/calendar-test" element={<Layout><CalendarTest /></Layout>} />
+            <Route path="/calendar-simple" element={<Layout><CalendarSimplified /></Layout>} />
             <Route path="/files" element={<Layout><Files /></Layout>} />
             <Route path="/settings" element={<Layout><Settings /></Layout>} />
             <Route path="*" element={<NotFound />} />

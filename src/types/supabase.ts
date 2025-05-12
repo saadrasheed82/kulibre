@@ -233,6 +233,10 @@ export interface Database {
           job_title: string | null
           department: string | null
           active: boolean | null
+          bio: string | null
+          notification_settings: Json | null
+          appearance_settings: Json | null
+          security_settings: Json | null
         }
         Insert: {
           id: string
@@ -249,6 +253,10 @@ export interface Database {
           job_title?: string | null
           department?: string | null
           active?: boolean | null
+          bio?: string | null
+          notification_settings?: Json | null
+          appearance_settings?: Json | null
+          security_settings?: Json | null
         }
         Update: {
           id?: string
@@ -265,6 +273,10 @@ export interface Database {
           job_title?: string | null
           department?: string | null
           active?: boolean | null
+          bio?: string | null
+          notification_settings?: Json | null
+          appearance_settings?: Json | null
+          security_settings?: Json | null
         }
         Relationships: [
           {

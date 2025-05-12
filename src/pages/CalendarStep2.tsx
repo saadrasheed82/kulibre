@@ -8,10 +8,10 @@ import { format } from "date-fns";
 
 export default function CalendarStep2() {
   console.log("CalendarStep2 component rendering...");
-  
+
   try {
     const [date, setDate] = useState<Date | undefined>(new Date());
-    
+
     // Simple query to test if React Query is working
     const { data, isLoading, error } = useQuery({
       queryKey: ['calendar-test'],
@@ -23,12 +23,12 @@ export default function CalendarStep2() {
             .from('profiles')
             .select('id, full_name')
             .limit(1);
-            
+
           if (error) {
             console.error("Supabase query error:", error);
             throw error;
           }
-          
+
           console.log("Query successful:", data);
           return data || [];
         } catch (err) {
@@ -37,14 +37,14 @@ export default function CalendarStep2() {
         }
       }
     });
-    
+
     return (
       <div className="space-y-8">
         <div>
           <h1 className="text-3xl font-bold">Calendar</h1>
           <p className="text-muted-foreground mt-1">View and manage your schedule</p>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-[350px_1fr] gap-6">
           <Card>
             <CardContent className="pt-6">
@@ -52,11 +52,23 @@ export default function CalendarStep2() {
                 mode="single"
                 selected={date}
                 onSelect={setDate}
-                className="rounded-md border"
+                className="rounded-md border calendar-fix"
+                components={{
+                  Day: ({ date: dayDate, ...props }) => {
+                    return (
+                      <div
+                        {...props}
+                        data-day
+                      >
+                        {dayDate.getDate()}
+                      </div>
+                    );
+                  }
+                }}
               />
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader>
               <CardTitle>

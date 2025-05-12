@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -12,6 +12,7 @@ import { EventDetailsModal } from "@/components/EventDetailsModal";
 import { CalendarFilters } from "@/components/CalendarFilters";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { CheckSquare } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,9 +26,11 @@ import {
 
 export default function CalendarPage() {
   console.log("Calendar component rendering...");
-  // Add error boundary
-  try {
+
+  // Add state for component error handling
+  const [componentError, setComponentError] = useState<Error | null>(null);
   const [date, setDate] = useState<Date | undefined>(new Date());
+  const eventsRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState("month");
   const [newEventModalOpen, setNewEventModalOpen] = useState(false);
   const [eventDetailsModalOpen, setEventDetailsModalOpen] = useState(false);
@@ -41,6 +44,20 @@ export default function CalendarPage() {
   const calendarRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Add error boundary effect
+  useEffect(() => {
+    const handleError = (error: ErrorEvent) => {
+      console.error("Calendar component error:", error);
+      setComponentError(error.error);
+    };
+
+    window.addEventListener('error', handleError);
+
+    return () => {
+      window.removeEventListener('error', handleError);
+    };
+  }, []);
 
   interface CalendarFiltersType {
     teamMember?: string;
@@ -523,12 +540,20 @@ export default function CalendarPage() {
   });
 
   // Function to format date for comparison
-  const formatDateForComparison = (dateString: string | Date) => {
+  const formatDateForComparison = (dateString: string | Date | undefined) => {
     try {
+      if (!dateString) return null;
+
       const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
-      return isValid(date) ? format(date, 'yyyy-MM-dd') : null;
+
+      if (!isValid(date)) {
+        console.error("Invalid date:", dateString);
+        return null;
+      }
+
+      return format(date, 'yyyy-MM-dd');
     } catch (error) {
-      console.error("Invalid date:", dateString);
+      console.error("Error formatting date for comparison:", error, dateString);
       return null;
     }
   };
@@ -616,6 +641,32 @@ export default function CalendarPage() {
       low: "bg-green-100 text-green-800"
     };
     return colors[priority] || "bg-gray-100 text-gray-800";
+  };
+
+  // State for loading events when date changes
+  const [isLoadingEvents, setIsLoadingEvents] = useState(false);
+
+  // Function to handle date selection
+  const handleDateSelect = (newDate: Date | undefined) => {
+    console.log("Date selected:", newDate);
+    setDate(newDate);
+    setIsLoadingEvents(true);
+
+    // Scroll to events section after a short delay to allow rendering
+    setTimeout(() => {
+      if (eventsRef.current) {
+        eventsRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+      // Simulate loading time for better UX
+      setTimeout(() => {
+        setIsLoadingEvents(false);
+      }, 300);
+    }, 100);
+  };
+
+  // Function to go to today's date
+  const goToToday = () => {
+    handleDateSelect(new Date());
   };
 
   // Function to handle event creation
@@ -746,6 +797,27 @@ export default function CalendarPage() {
     }
   };
 
+  // If there's an error, show the error UI
+  if (componentError) {
+    return (
+      <div className="p-8">
+        <h1 className="text-3xl font-bold mb-4">Calendar Error</h1>
+        <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
+          <p className="text-red-600">There was an error loading the calendar component.</p>
+          <p className="text-sm text-red-500 mt-2">
+            Error details: {componentError.message || String(componentError)}
+          </p>
+        </div>
+        <button
+          onClick={() => window.location.reload()}
+          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+        >
+          Reload Page
+        </button>
+      </div>
+    );
+  }
+
   return (
       <div className="space-y-8">
         <div>
@@ -754,22 +826,33 @@ export default function CalendarPage() {
         </div>
 
         <div className="flex flex-col sm:flex-row justify-between gap-4">
-          <ToggleGroup
-            type="single"
-            defaultValue="month"
-            className="mb-4"
-            onValueChange={setView}
-          >
-            <ToggleGroupItem value="month" aria-label="Month">
-              Month
-            </ToggleGroupItem>
-            <ToggleGroupItem value="week" aria-label="Week">
-              Week
-            </ToggleGroupItem>
-            <ToggleGroupItem value="day" aria-label="Day">
-              Day
-            </ToggleGroupItem>
-          </ToggleGroup>
+          <div className="flex flex-wrap gap-2 items-center">
+            <ToggleGroup
+              type="single"
+              defaultValue="month"
+              className="mb-4"
+              onValueChange={setView}
+            >
+              <ToggleGroupItem value="month" aria-label="Month">
+                Month
+              </ToggleGroupItem>
+              <ToggleGroupItem value="week" aria-label="Week">
+                Week
+              </ToggleGroupItem>
+              <ToggleGroupItem value="day" aria-label="Day">
+                Day
+              </ToggleGroupItem>
+            </ToggleGroup>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={goToToday}
+              className="mb-4"
+            >
+              Today
+            </Button>
+          </div>
 
           <Button onClick={() => setNewEventModalOpen(true)}>Add New Event</Button>
         </div>
@@ -812,8 +895,8 @@ export default function CalendarPage() {
                   <Calendar
                     mode="single"
                     selected={date}
-                    onSelect={setDate}
-                    className="rounded-md border"
+                    onSelect={handleDateSelect}
+                    className="rounded-md border calendar-fix"
                     modifiers={{
                       eventDay: (day) => {
                         // Check if this day has any events
@@ -844,13 +927,66 @@ export default function CalendarPage() {
                     }}
                     components={{
                       Day: ({ date: dayDate, ...props }) => {
-                        // Add data-date attribute to each day for drag and drop
+                        // Add data-date attribute for drag and drop
+                        const dayStr = format(dayDate, 'yyyy-MM-dd');
+
+                        // Check if this day has events
+                        const hasEvents = events?.events.some(event => {
+                          if (!event.start_date) return false;
+                          return format(new Date(event.start_date), 'yyyy-MM-dd') === dayStr;
+                        }) || events?.tasks.some(task => {
+                          if (!task.due_date) return false;
+                          return format(new Date(task.due_date), 'yyyy-MM-dd') === dayStr;
+                        });
+
+                        // Check if this is the selected date
+                        const isSelected = date ? format(date, 'yyyy-MM-dd') === dayStr : false;
+
+                        // Count events for this day
+                        const eventCount = events?.events.filter(event => {
+                          if (!event.start_date) return false;
+                          return format(new Date(event.start_date), 'yyyy-MM-dd') === dayStr;
+                        }).length || 0;
+
+                        const taskCount = events?.tasks.filter(task => {
+                          if (!task.due_date) return false;
+                          return format(new Date(task.due_date), 'yyyy-MM-dd') === dayStr;
+                        }).length || 0;
+
+                        const totalCount = eventCount + taskCount;
+
                         return (
                           <div
                             {...props}
                             data-day
                             data-date={dayDate.toISOString()}
-                          />
+                            className={`
+                              ${props.className || ''}
+                              ${hasEvents ? 'cursor-pointer hover:bg-primary/20' : ''}
+                              ${isSelected ? 'ring-2 ring-primary' : ''}
+                              relative
+                            `}
+                            title={hasEvents ? `${totalCount} event${totalCount !== 1 ? 's' : ''} on ${format(dayDate, 'MMMM d, yyyy')}` : ""}
+                            onClick={() => handleDateSelect(dayDate)}
+                          >
+                            {dayDate.getDate()}
+                            {hasEvents && (
+                              <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 flex gap-0.5">
+                                {totalCount > 3 ? (
+                                  <div className="text-[8px] font-bold text-primary">
+                                    {totalCount}
+                                  </div>
+                                ) : (
+                                  Array(totalCount).fill(0).map((_, i) => (
+                                    <div
+                                      key={i}
+                                      className="w-1 h-1 bg-primary rounded-full"
+                                    />
+                                  ))
+                                )}
+                              </div>
+                            )}
+                          </div>
                         );
                       }
                     }}
@@ -872,9 +1008,9 @@ export default function CalendarPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>
+          <Card className="border-t-4 border-t-primary">
+            <CardHeader className="pb-3">
+              <CardTitle ref={eventsRef} className="text-xl">
                 Events for {date ? format(date, 'MMMM d, yyyy') : 'Today'}
               </CardTitle>
             </CardHeader>
@@ -893,16 +1029,27 @@ export default function CalendarPage() {
                     Refresh Page
                   </Button>
                 </div>
+              ) : isLoadingEvents ? (
+                <div className="flex justify-center items-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
               ) : (
                 <>
                   {selectedDateEvents.length > 0 && (
-                    <div>
-                      <h3 className="font-medium mb-3">Events</h3>
-                      <div className="space-y-2">
+                    <div className="animate-fadeIn">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-medium flex items-center">
+                          Events ({selectedDateEvents.length})
+                        </h3>
+                        <Badge variant="outline" className="text-xs">
+                          {date ? format(date, 'EEEE') : 'Today'}
+                        </Badge>
+                      </div>
+                      <div className="space-y-3">
                         {selectedDateEvents.map(event => (
                           <div
                             key={event.id}
-                            className="flex items-center justify-between p-3 bg-muted rounded-lg hover:cursor-pointer hover:bg-muted/80 transition-colors"
+                            className="flex items-center justify-between p-3 bg-muted rounded-lg hover:cursor-pointer hover:bg-muted/80 transition-colors hover:shadow-md border-l-4 border-primary"
                             onClick={() => {
                               setSelectedEvent(event);
                               setEventDetailsModalOpen(true);
@@ -913,9 +1060,16 @@ export default function CalendarPage() {
                               handleDragStart(event);
                             }}
                           >
-                            <div>
-                              <p className="font-medium">{event.title}</p>
-                              <div className="flex gap-2 mt-1">
+                            <div className="flex-1">
+                              <div className="flex items-center">
+                                <p className="font-medium">{event.title}</p>
+                                <div className="ml-auto text-sm text-muted-foreground">
+                                  {event.all_day ? 'All day' : (
+                                    event.start_date && format(new Date(event.start_date), 'h:mm a')
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex flex-wrap gap-2 mt-1">
                                 <Badge className={getEventTypeColor(event.event_type)}>
                                   {event.event_type.charAt(0).toUpperCase() + event.event_type.slice(1)}
                                 </Badge>
@@ -931,11 +1085,6 @@ export default function CalendarPage() {
                                 </p>
                               )}
                             </div>
-                            <div className="text-sm text-muted-foreground">
-                              {event.all_day ? 'All day' : (
-                                event.start_date && format(new Date(event.start_date), 'h:mm a')
-                              )}
-                            </div>
                           </div>
                         ))}
                       </div>
@@ -943,13 +1092,21 @@ export default function CalendarPage() {
                   )}
 
                   {selectedDateTasks.length > 0 && (
-                    <div>
-                      <h3 className="font-medium mb-3">Tasks Due</h3>
-                      <div className="space-y-2">
+                    <div className="animate-fadeIn">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-medium flex items-center">
+                          <CheckSquare className="h-4 w-4 mr-2 text-primary" />
+                          Tasks Due ({selectedDateTasks.length})
+                        </h3>
+                        <Badge variant="outline" className="text-xs">
+                          {date ? format(date, 'MMM d') : 'Today'}
+                        </Badge>
+                      </div>
+                      <div className="space-y-3">
                         {selectedDateTasks.map(task => (
                           <div
                             key={task.id}
-                            className="flex items-center justify-between p-3 bg-muted rounded-lg hover:cursor-pointer hover:bg-muted/80 transition-colors"
+                            className="flex items-center justify-between p-3 bg-muted rounded-lg hover:cursor-pointer hover:bg-muted/80 transition-colors hover:shadow-md border-l-4 border-blue-400"
                             onClick={() => {
                               setSelectedEvent({
                                 ...task,
@@ -970,15 +1127,27 @@ export default function CalendarPage() {
                               });
                             }}
                           >
-                            <div>
-                              <p className="font-medium">{task.title}</p>
-                              <Badge className={`${getTaskPriorityColor(task.priority)} mt-1`} variant="outline">
-                                {task.priority} priority
-                              </Badge>
+                            <div className="flex-1">
+                              <div className="flex items-center">
+                                <p className="font-medium">{task.title}</p>
+                                <Badge
+                                  className={`${getTaskPriorityColor(task.priority)} ml-auto`}
+                                  variant="outline"
+                                >
+                                  {task.priority} priority
+                                </Badge>
+                              </div>
                               {task.description && (
                                 <p className="text-sm text-muted-foreground mt-1 line-clamp-1">
                                   {task.description}
                                 </p>
+                              )}
+                              {task.project && (
+                                <div className="mt-1">
+                                  <Badge variant="outline" className="text-xs">
+                                    {task.project.name}
+                                  </Badge>
+                                </div>
                               )}
                             </div>
                           </div>
@@ -988,9 +1157,30 @@ export default function CalendarPage() {
                   )}
 
                   {selectedDateEvents.length === 0 && selectedDateTasks.length === 0 && (
-                    <p className="text-muted-foreground text-center py-8">
-                      No events scheduled for this day
-                    </p>
+                    <div className="text-muted-foreground text-center py-8 animate-fadeIn">
+                      <div className="bg-muted p-6 rounded-lg border border-dashed border-muted-foreground/50">
+                        <p className="font-medium">No events scheduled for {date ? format(date, 'MMMM d, yyyy') : 'today'}</p>
+                        <p className="text-sm mt-1">Your schedule is clear for this day.</p>
+                        <div className="flex justify-center mt-4 gap-2">
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => setNewEventModalOpen(true)}
+                            className="flex items-center"
+                          >
+                            <span className="mr-1">+</span> Add Event
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={goToToday}
+                            className="flex items-center"
+                          >
+                            Go to Today
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </>
               )}
@@ -1035,24 +1225,4 @@ export default function CalendarPage() {
         </AlertDialog>
       </div>
   );
-  } catch (error) {
-    console.error("Calendar component error:", error);
-    return (
-      <div className="p-8">
-        <h1 className="text-3xl font-bold mb-4">Calendar Error</h1>
-        <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
-          <p className="text-red-600">There was an error loading the calendar component.</p>
-          <p className="text-sm text-red-500 mt-2">
-            Error details: {error instanceof Error ? error.message : String(error)}
-          </p>
-        </div>
-        <button
-          onClick={() => window.location.reload()}
-          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
-        >
-          Reload Page
-        </button>
-      </div>
-    );
-  }
 }

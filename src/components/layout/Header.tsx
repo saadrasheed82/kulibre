@@ -1,9 +1,17 @@
 
-import { Bell, Search } from "lucide-react";
+import { Bell, Search, Settings, LogOut, User } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function Header() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -67,9 +75,44 @@ export function Header() {
             3
           </span>
         </div>
-        <div className="h-9 w-9 rounded-full bg-kulibre-purple flex items-center justify-center text-white font-medium">
-          {userInitials}
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="h-9 w-9 rounded-full bg-kulibre-purple flex items-center justify-center text-white font-medium outline-none">
+              {userInitials}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link to="/settings" className="cursor-pointer flex items-center">
+                <User className="mr-2 h-4 w-4" />
+                <span>Profile</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/settings" className="cursor-pointer flex items-center">
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Settings</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={async () => {
+                await supabase.auth.signOut();
+                toast({
+                  title: "Signed out",
+                  description: "You have been signed out successfully.",
+                });
+                navigate("/login");
+              }}
+              className="cursor-pointer flex items-center text-red-500"
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Log out</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );

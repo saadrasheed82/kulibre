@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function CalendarStep3() {
   console.log("CalendarStep3 component rendering...");
-  
+
   try {
     const [date, setDate] = useState<Date | undefined>(new Date());
     const [searchQuery, setSearchQuery] = useState("");
@@ -41,33 +41,33 @@ export default function CalendarStep3() {
           const { data: tasksData, error: tasksError } = await supabase
             .from('tasks')
             .select(`
-              id, 
-              title, 
-              due_date, 
-              priority, 
+              id,
+              title,
+              due_date,
+              priority,
               description,
               status,
               project:project_id (id, name),
               assignee:assigned_to (id, full_name)
             `)
             .ilike('title', `%${searchQuery}%`);
-            
+
           if (tasksError) {
             console.error("Error fetching tasks:", tasksError);
           }
-          
+
           console.log("Tasks fetched:", tasksData?.length || 0);
-          
+
           // Fetch calendar events
           const { data: eventsData, error: eventsError } = await supabase
             .from('calendar_events')
             .select('*')
             .ilike('title', `%${searchQuery}%`);
-            
+
           if (eventsError) {
             console.error("Error fetching calendar events:", eventsError);
           }
-          
+
           // Return combined data structure
           return {
             events: eventsData || [],
@@ -141,7 +141,19 @@ export default function CalendarStep3() {
                 mode="single"
                 selected={date}
                 onSelect={setDate}
-                className="rounded-md border"
+                className="rounded-md border calendar-fix"
+                components={{
+                  Day: ({ date: dayDate, ...props }) => {
+                    return (
+                      <div
+                        {...props}
+                        data-day
+                      >
+                        {dayDate.getDate()}
+                      </div>
+                    );
+                  }
+                }}
               />
             </CardContent>
           </Card>
@@ -159,9 +171,9 @@ export default function CalendarStep3() {
                 <div className="text-center py-8">
                   <p className="text-red-500 mb-2">Error loading tasks</p>
                   <p className="text-muted-foreground">There was a problem loading your tasks. Please try again later.</p>
-                  <Button 
-                    onClick={() => window.location.reload()} 
-                    variant="outline" 
+                  <Button
+                    onClick={() => window.location.reload()}
+                    variant="outline"
                     className="mt-4"
                   >
                     Refresh Page
