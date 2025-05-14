@@ -64,9 +64,9 @@ export function EventDetailsModal({ open, onOpenChange, event, onEventUpdated }:
   // Function to delete event
   const handleDeleteEvent = async () => {
     if (!event?.id) return;
-
+    
     setIsDeleting(true);
-
+    
     try {
       // Check if this is a calendar event or a task
       if (event.event_type === 'task' && !event.all_day && !event.calendar_event) {
@@ -75,7 +75,6 @@ export function EventDetailsModal({ open, onOpenChange, event, onEventUpdated }:
           .from('tasks')
           .delete()
           .eq('id', event.id);
-
         if (error) throw error;
       } else {
         // This is a calendar event
@@ -83,17 +82,17 @@ export function EventDetailsModal({ open, onOpenChange, event, onEventUpdated }:
           .from('calendar_events')
           .delete()
           .eq('id', event.id);
-
+          
         if (error) throw error;
       }
-
+      
       toast({
         title: "Event deleted",
         description: "The event has been removed from your calendar.",
       });
-
+      
       onOpenChange(false);
-
+      
       // Call callback if provided
       if (onEventUpdated) {
         onEventUpdated();
@@ -202,7 +201,7 @@ export function EventDetailsModal({ open, onOpenChange, event, onEventUpdated }:
           </div>
         </AlertDialogDescription>
         <AlertDialogFooter className="flex justify-between">
-          <Button
+          <Button 
             variant="destructive"
             size="sm"
             onClick={handleDeleteEvent}

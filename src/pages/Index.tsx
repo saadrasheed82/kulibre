@@ -1,10 +1,15 @@
 
+<<<<<<< HEAD
 import { Clock, CheckSquare, AlertTriangle, FolderKanban, ArrowRight } from "lucide-react";
+=======
+import { Clock, CheckSquare, AlertTriangle, FolderKanban } from "lucide-react";
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
 import { StatCard } from "@/components/dashboard/StatCard";
 import { TaskCard } from "@/components/dashboard/TaskCard";
 import { TeamWorkloadChart } from "@/components/dashboard/TeamWorkloadChart";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { Button } from "@/components/ui/button";
+<<<<<<< HEAD
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -22,13 +27,42 @@ export default function Index() {
   const [completedTasks, setCompletedTasks] = useState<string[]>([]);
 
   // Fetch tasks due today
+=======
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
+import { Skeleton } from "@/components/ui/skeleton";
+
+
+
+const teamWorkloadData = [
+  { name: "Alex", tasks: 8, max: 10 },
+  { name: "Jamie", tasks: 5, max: 10 },
+  { name: "Taylor", tasks: 12, max: 10 },
+  { name: "Morgan", tasks: 3, max: 10 },
+  { name: "Jordan", tasks: 7, max: 10 },
+];
+
+export default function Index() {
+  const navigate = useNavigate();
+  const [completedTasks, setCompletedTasks] = useState<string[]>([]);
+
+  // No project queries needed
+
+  // Fetch tasks
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
   const { data: tasks, isLoading: isLoadingTasks } = useQuery({
     queryKey: ['dashboard-tasks'],
     queryFn: async () => {
       try {
+<<<<<<< HEAD
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
+=======
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
         const { data, error } = await supabase
           .from('tasks')
           .select(`
@@ -36,6 +70,7 @@ export default function Index() {
             project:project_id (id, name)
           `)
           .is('completed_at', null)
+<<<<<<< HEAD
           .gte('due_date', today.toISOString())
           .lt('due_date', new Date(today.getTime() + 86400000).toISOString()) // +1 day
           .order('due_date', { ascending: true })
@@ -43,6 +78,13 @@ export default function Index() {
 
         if (error) throw error;
         return data || [];
+=======
+          .order('due_date', { ascending: true })
+          .limit(3);
+
+        if (error) throw error;
+        return data;
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
       } catch (error) {
         console.error("Error fetching tasks:", error);
         throw error;
@@ -50,6 +92,7 @@ export default function Index() {
     }
   });
 
+<<<<<<< HEAD
   // Fetch active tasks count
   const { data: activeTasks, isLoading: isLoadingActiveTasks } = useQuery({
     queryKey: ['dashboard-active-tasks-count'],
@@ -322,6 +365,9 @@ export default function Index() {
 
   const toggleTaskCompletion = (taskId: string) => {
     // First update local state for immediate UI feedback
+=======
+  const toggleTaskCompletion = (taskId: string) => {
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
     setCompletedTasks(prev =>
       prev.includes(taskId)
         ? prev.filter(id => id !== taskId)
@@ -352,6 +398,7 @@ export default function Index() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         <StatCard
           title="Active Tasks"
+<<<<<<< HEAD
           value={isLoadingActiveTasks ? "..." : activeTasks?.toString() || "0"}
           icon={<FolderKanban className="h-5 w-5" />}
           description="In progress"
@@ -363,13 +410,30 @@ export default function Index() {
           value={isLoadingTasks ? "..." : tasks?.length.toString() || "0"}
           icon={<Clock className="h-5 w-5" />}
           description={`${isLoadingHighPriorityTasks ? "..." : highPriorityTasks} high priority`}
+=======
+          value="5"
+          icon={<FolderKanban className="h-5 w-5" />}
+          description="In progress"
+          trend="up"
+          trendValue="↑ 2 new this week"
+        />
+        <StatCard
+          title="Tasks Due Today"
+          value={tasks?.length.toString() || "0"}
+          icon={<Clock className="h-5 w-5" />}
+          description="3 high priority"
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
           trend="neutral"
           trendValue="Due today"
           bgColor="bg-kulibre-yellow/50"
         />
         <StatCard
           title="Completed Tasks"
+<<<<<<< HEAD
           value={isLoadingCompletedTasks ? "..." : completedTasksCount?.toString() || "0"}
+=======
+          value="124"
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
           icon={<CheckSquare className="h-5 w-5" />}
           description="This week"
           trend="up"
@@ -377,6 +441,7 @@ export default function Index() {
           bgColor="bg-kulibre-green/50"
         />
         <StatCard
+<<<<<<< HEAD
           title="Team Members"
           value={isLoadingTeamWorkload ? "..." : teamWorkload?.length.toString() || "0"}
           icon={<AlertTriangle className="h-5 w-5" />}
@@ -384,6 +449,15 @@ export default function Index() {
           trend="neutral"
           trendValue="Team status"
           bgColor="bg-kulibre-orange/50"
+=======
+          title="Pending Feedback"
+          value="4"
+          icon={<AlertTriangle className="h-5 w-5" />}
+          description="Client review needed"
+          trend="down"
+          trendValue="↓ 2 from yesterday"
+          bgColor="bg-creatively-orange/50"
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
         />
       </div>
 
@@ -392,6 +466,7 @@ export default function Index() {
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold">Recent Activity</h2>
+<<<<<<< HEAD
               <Button variant="ghost" size="sm">
                 View All
               </Button>
@@ -401,6 +476,15 @@ export default function Index() {
               activities={recentActivity || []}
               isLoading={isLoadingActivity}
             />
+=======
+            </div>
+
+            <Card className="p-6">
+              <p className="text-center text-muted-foreground">
+                Your recent activity will appear here.
+              </p>
+            </Card>
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
           </div>
 
           <Card>
@@ -436,15 +520,23 @@ export default function Index() {
                   {tasks.map(task => (
                     <TaskCard
                       key={task.id}
+<<<<<<< HEAD
                       id={task.id}
                       title={task.title}
                       project={task.project?.name || "No Project"}
                       projectId={task.project_id}
+=======
+                      title={task.title}
+                      project={task.project?.name || "No Project"}
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
                       dueTime={task.due_date ? new Date(task.due_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Today"}
                       priority={(task.priority === "high" || task.priority === "medium" || task.priority === "low") ? task.priority : "medium"}
                       completed={completedTasks.includes(task.id)}
                       onClick={() => toggleTaskCompletion(task.id)}
+<<<<<<< HEAD
                       showViewButton={true}
+=======
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
                     />
                   ))}
                 </>

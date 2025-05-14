@@ -11,7 +11,11 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function CalendarStep3() {
   console.log("CalendarStep3 component rendering...");
+<<<<<<< HEAD
 
+=======
+  
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
   try {
     const [date, setDate] = useState<Date | undefined>(new Date());
     const [searchQuery, setSearchQuery] = useState("");
@@ -41,16 +45,24 @@ export default function CalendarStep3() {
           const { data: tasksData, error: tasksError } = await supabase
             .from('tasks')
             .select(`
+<<<<<<< HEAD
               id,
               title,
               due_date,
               priority,
+=======
+              id, 
+              title, 
+              due_date, 
+              priority, 
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
               description,
               status,
               project:project_id (id, name),
               assignee:assigned_to (id, full_name)
             `)
             .ilike('title', `%${searchQuery}%`);
+<<<<<<< HEAD
 
           if (tasksError) {
             console.error("Error fetching tasks:", tasksError);
@@ -58,16 +70,33 @@ export default function CalendarStep3() {
 
           console.log("Tasks fetched:", tasksData?.length || 0);
 
+=======
+            
+          if (tasksError) {
+            console.error("Error fetching tasks:", tasksError);
+          }
+          
+          console.log("Tasks fetched:", tasksData?.length || 0);
+          
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
           // Fetch calendar events
           const { data: eventsData, error: eventsError } = await supabase
             .from('calendar_events')
             .select('*')
             .ilike('title', `%${searchQuery}%`);
+<<<<<<< HEAD
 
           if (eventsError) {
             console.error("Error fetching calendar events:", eventsError);
           }
 
+=======
+            
+          if (eventsError) {
+            console.error("Error fetching calendar events:", eventsError);
+          }
+          
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
           // Return combined data structure
           return {
             events: eventsData || [],
@@ -141,6 +170,7 @@ export default function CalendarStep3() {
                 mode="single"
                 selected={date}
                 onSelect={setDate}
+<<<<<<< HEAD
                 className="rounded-md border calendar-fix"
                 components={{
                   Day: ({ date: dayDate, ...props }) => {
@@ -154,6 +184,9 @@ export default function CalendarStep3() {
                     );
                   }
                 }}
+=======
+                className="rounded-md border"
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
               />
             </CardContent>
           </Card>
@@ -171,9 +204,15 @@ export default function CalendarStep3() {
                 <div className="text-center py-8">
                   <p className="text-red-500 mb-2">Error loading tasks</p>
                   <p className="text-muted-foreground">There was a problem loading your tasks. Please try again later.</p>
+<<<<<<< HEAD
                   <Button
                     onClick={() => window.location.reload()}
                     variant="outline"
+=======
+                  <Button 
+                    onClick={() => window.location.reload()} 
+                    variant="outline" 
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
                     className="mt-4"
                   >
                     Refresh Page

@@ -30,7 +30,11 @@ import { cn } from "@/lib/utils"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { format } from "date-fns"
 import { CalendarIcon, Clock } from "lucide-react"
+<<<<<<< HEAD
 import { useState, useEffect } from "react"
+=======
+import { useState } from "react"
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
 import { useForm } from "react-hook-form"
 import * as z from "zod"
 import { useQuery } from "@tanstack/react-query";
@@ -58,6 +62,7 @@ interface NewEventModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onEventCreated?: () => void;
+<<<<<<< HEAD
   onEventUpdated?: () => void;
   event?: any; // The event to edit, if in edit mode
   isEditing?: boolean;
@@ -102,6 +107,13 @@ export function NewEventModal({
       checkAuth();
     }
   }, [open, onOpenChange, toast]);
+=======
+}
+
+export function NewEventModal({ open, onOpenChange, onEventCreated }: NewEventModalProps) {
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
 
   // Fetch projects for the dropdown
   const { data: projects } = useQuery({
@@ -112,7 +124,11 @@ export function NewEventModal({
           .from('projects')
           .select('id, name')
           .order('name');
+<<<<<<< HEAD
 
+=======
+          
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
         if (error) throw error;
         return data || [];
       } catch (error) {
@@ -132,7 +148,11 @@ export function NewEventModal({
           .from('profiles')
           .select('id, full_name')
           .order('full_name');
+<<<<<<< HEAD
 
+=======
+          
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
         if (error) throw error;
         return data || [];
       } catch (error) {
@@ -143,7 +163,10 @@ export function NewEventModal({
     enabled: open, // Only fetch when modal is open
   });
 
+<<<<<<< HEAD
   // Set up form with default values or event data if editing
+=======
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
     defaultValues: isEditing && event ? {
@@ -171,6 +194,7 @@ export function NewEventModal({
     },
   });
 
+<<<<<<< HEAD
   // Update modal title based on whether we're editing or creating
   useEffect(() => {
     setModalTitle(isEditing ? "Edit Event" : "Add New Event");
@@ -192,10 +216,13 @@ export function NewEventModal({
     }
   }, [isEditing, event, form]);
 
+=======
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
   const watchAllDay = form.watch("allDay");
 
   async function onSubmit(values: z.infer<typeof FormSchema>) {
     setIsSubmitting(true);
+<<<<<<< HEAD
 
     try {
       // Get current user
@@ -209,6 +236,15 @@ export function NewEventModal({
         });
         onOpenChange(false);
         return;
+=======
+    
+    try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error("You must be logged in to create an event");
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
       }
 
       // Format start date with time if not all day
@@ -225,6 +261,7 @@ export function NewEventModal({
         endDateTime.setHours(hours, minutes);
       }
 
+<<<<<<< HEAD
       if (isEditing && event?.id) {
         // Check if this is a task being converted to a calendar event
         if (event.is_task_conversion) {
@@ -367,6 +404,63 @@ export function NewEventModal({
       toast({
         title: `Error ${isEditing ? 'updating' : 'creating'} event`,
         description: error.message || `Failed to ${isEditing ? 'update' : 'create'} event. Please try again.`,
+=======
+      // Insert event
+      const { data: eventData, error: eventError } = await supabase
+        .from('calendar_events')
+        .insert([{
+          title: values.title,
+          description: values.description,
+          event_type: values.eventType,
+          start_date: startDateTime.toISOString(),
+          end_date: endDateTime ? endDateTime.toISOString() : null,
+          all_day: values.allDay,
+          project_id: values.projectId || null,
+          created_by: user.id,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }])
+        .select();
+
+      if (eventError) throw eventError;
+
+      // Add attendees if any are selected
+      if (values.assignedMembers.length > 0 && eventData && eventData[0]) {
+        const attendeesData = values.assignedMembers.map(memberId => ({
+          event_id: eventData[0].id,
+          user_id: memberId,
+          role: 'attendee',
+          response: 'pending'
+        }));
+
+        const { error: attendeesError } = await supabase
+          .from('event_attendees')
+          .insert(attendeesData);
+
+        if (attendeesError) {
+          console.error("Error adding attendees:", attendeesError);
+        }
+      }
+
+      toast({
+        title: "Event created",
+        description: "Your event has been added to the calendar.",
+      });
+
+      // Reset form and close modal
+      form.reset();
+      onOpenChange(false);
+      
+      // Call callback if provided
+      if (onEventCreated) {
+        onEventCreated();
+      }
+    } catch (error: any) {
+      console.error("Error creating event:", error);
+      toast({
+        title: "Error creating event",
+        description: error.message || "Failed to create event. Please try again.",
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
         variant: "destructive",
       });
     } finally {
@@ -376,6 +470,7 @@ export function NewEventModal({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
+<<<<<<< HEAD
       <AlertDialogContent className="max-w-[500px] max-h-[80vh] overflow-y-auto">
         {isAuthenticated === null ? (
           <div className="py-8 text-center">
@@ -394,6 +489,17 @@ export function NewEventModal({
             </AlertDialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2">
+=======
+      <AlertDialogContent className="max-w-[500px]">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Add New Event</AlertDialogTitle>
+          <AlertDialogDescription>
+            Create a new event to add to your calendar.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
             <FormField
               control={form.control}
               name="title"
@@ -654,7 +760,233 @@ export function NewEventModal({
                 </FormItem>
               )}
             />
+<<<<<<< HEAD
 
+=======
+            
+            <FormField
+              control={form.control}
+              name="projectId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Related Project</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || ""}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a project (optional)" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="">None</SelectItem>
+                      {projects?.map(project => (
+                        <SelectItem key={project.id} value={project.id}>
+                          {project.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="allDay"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>All-day event</FormLabel>
+                    <FormDescription>
+                      This event will take the entire day
+                    </FormDescription>
+                  </div>
+                </FormItem>
+              )}
+            />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="startDate"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Start Date</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              {!watchAllDay && (
+                <FormField
+                  control={form.control}
+                  name="startTime"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Start Time</FormLabel>
+                      <div className="flex items-center">
+                        <Clock className="mr-2 h-4 w-4 opacity-50" />
+                        <FormControl>
+                          <Input type="time" {...field} />
+                        </FormControl>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="endDate"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>End Date (Optional)</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          initialFocus
+                          disabled={(date) => 
+                            date < form.getValues("startDate")
+                          }
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              {!watchAllDay && (
+                <FormField
+                  control={form.control}
+                  name="endTime"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>End Time</FormLabel>
+                      <div className="flex items-center">
+                        <Clock className="mr-2 h-4 w-4 opacity-50" />
+                        <FormControl>
+                          <Input type="time" {...field} />
+                        </FormControl>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+            </div>
+            
+            <FormField
+              control={form.control}
+              name="assignedMembers"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Attendees</FormLabel>
+                  <Select
+                    onValueChange={(value) => {
+                      const currentValues = field.value || [];
+                      if (currentValues.includes(value)) {
+                        field.onChange(currentValues.filter(v => v !== value));
+                      } else {
+                        field.onChange([...currentValues, value]);
+                      }
+                    }}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={
+                          field.value.length > 0 
+                            ? `${field.value.length} attendee(s) selected` 
+                            : "Select attendees"
+                        } />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {teamMembers?.map(member => (
+                        <SelectItem 
+                          key={member.id} 
+                          value={member.id}
+                          className={cn(
+                            field.value.includes(member.id) && "bg-primary/10"
+                          )}
+                        >
+                          {member.full_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Selected: {field.value.length > 0 
+                      ? teamMembers
+                          ?.filter(m => field.value.includes(m.id))
+                          .map(m => m.full_name)
+                          .join(", ")
+                      : "None"}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
             <FormField
               control={form.control}
               name="description"
@@ -675,8 +1007,13 @@ export function NewEventModal({
             />
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
+<<<<<<< HEAD
               <AlertDialogAction
                 type="submit"
+=======
+              <AlertDialogAction 
+                type="submit" 
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
                 disabled={isSubmitting}
               >
                 {isSubmitting ? "Saving..." : "Save"}

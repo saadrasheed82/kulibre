@@ -9,6 +9,55 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+<<<<<<< HEAD
+=======
+      user_tasks: {
+        Row: {
+          id: string
+          title: string
+          description: string | null
+          status: string
+          priority: string
+          due_date: string | null
+          completed_at: string | null
+          user_id: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          description?: string | null
+          status?: string
+          priority?: string
+          due_date?: string | null
+          completed_at?: string | null
+          user_id: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          description?: string | null
+          status?: string
+          priority?: string
+          due_date?: string | null
+          completed_at?: string | null
+          user_id?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_tasks_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
       calendar_events: {
         Row: {
           id: string
@@ -221,8 +270,11 @@ export interface Database {
         Row: {
           id: string
           full_name: string
+<<<<<<< HEAD
           first_name: string | null
           last_name: string | null
+=======
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
           avatar_url: string | null
           website: string | null
           email: string | null
@@ -230,6 +282,7 @@ export interface Database {
           role: string | null
           company: string | null
           created_at: string | null
+<<<<<<< HEAD
           job_title: string | null
           department: string | null
           active: boolean | null
@@ -237,12 +290,17 @@ export interface Database {
           notification_settings: Json | null
           appearance_settings: Json | null
           security_settings: Json | null
+=======
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
         }
         Insert: {
           id: string
           full_name?: string
+<<<<<<< HEAD
           first_name?: string | null
           last_name?: string | null
+=======
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
           avatar_url?: string | null
           website?: string | null
           email?: string | null
@@ -250,6 +308,7 @@ export interface Database {
           role?: string | null
           company?: string | null
           created_at?: string | null
+<<<<<<< HEAD
           job_title?: string | null
           department?: string | null
           active?: boolean | null
@@ -257,12 +316,17 @@ export interface Database {
           notification_settings?: Json | null
           appearance_settings?: Json | null
           security_settings?: Json | null
+=======
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
         }
         Update: {
           id?: string
           full_name?: string
+<<<<<<< HEAD
           first_name?: string | null
           last_name?: string | null
+=======
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
           avatar_url?: string | null
           website?: string | null
           email?: string | null
@@ -270,6 +334,7 @@ export interface Database {
           role?: string | null
           company?: string | null
           created_at?: string | null
+<<<<<<< HEAD
           job_title?: string | null
           department?: string | null
           active?: boolean | null
@@ -277,6 +342,8 @@ export interface Database {
           notification_settings?: Json | null
           appearance_settings?: Json | null
           security_settings?: Json | null
+=======
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
         }
         Relationships: [
           {
@@ -287,6 +354,7 @@ export interface Database {
           }
         ]
       }
+<<<<<<< HEAD
       team_members: {
         Row: {
           id: string
@@ -332,6 +400,8 @@ export interface Database {
         }
         Relationships: []
       }
+=======
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
       project_files: {
         Row: {
           id: string
@@ -470,6 +540,61 @@ export interface Database {
           }
         ]
       }
+<<<<<<< HEAD
+=======
+      team: {
+        Row: {
+          id: string
+          name: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      user_team: {
+        Row: {
+          id: string
+          team_id: string
+          user_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          team_id: string
+          user_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          team_id?: string
+          user_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_team_team_id_fkey"
+            columns: ["team_id"]
+            referencedRelation: "team"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_team_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
       subscriptions: {
         Row: {
           id: string
@@ -583,6 +708,7 @@ export interface Database {
           }
         ]
       }
+<<<<<<< HEAD
       user_tasks: {
         Row: {
           id: string
@@ -656,6 +782,37 @@ export interface Database {
             referencedColumns: ["id"]
           }
         ]
+=======
+      team_invitations: {
+        Row: {
+          id: string
+          team_id: string
+          email: string
+          role: string
+          token: string
+          expires_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          team_id: string
+          email: string
+          role?: string
+          token: string
+          expires_at: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          team_id?: string
+          email?: string
+          role?: string
+          token?: string
+          expires_at?: string
+          created_at?: string
+        }
+        Relationships: []
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
       }
       time_entries: {
         Row: {

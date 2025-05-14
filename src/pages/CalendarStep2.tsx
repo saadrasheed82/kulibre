@@ -8,10 +8,17 @@ import { format } from "date-fns";
 
 export default function CalendarStep2() {
   console.log("CalendarStep2 component rendering...");
+<<<<<<< HEAD
 
   try {
     const [date, setDate] = useState<Date | undefined>(new Date());
 
+=======
+  
+  try {
+    const [date, setDate] = useState<Date | undefined>(new Date());
+    
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
     // Simple query to test if React Query is working
     const { data, isLoading, error } = useQuery({
       queryKey: ['calendar-test'],
@@ -23,12 +30,20 @@ export default function CalendarStep2() {
             .from('profiles')
             .select('id, full_name')
             .limit(1);
+<<<<<<< HEAD
 
+=======
+            
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
           if (error) {
             console.error("Supabase query error:", error);
             throw error;
           }
+<<<<<<< HEAD
 
+=======
+          
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
           console.log("Query successful:", data);
           return data || [];
         } catch (err) {
@@ -37,14 +52,22 @@ export default function CalendarStep2() {
         }
       }
     });
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
     return (
       <div className="space-y-8">
         <div>
           <h1 className="text-3xl font-bold">Calendar</h1>
           <p className="text-muted-foreground mt-1">View and manage your schedule</p>
         </div>
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
         <div className="grid grid-cols-1 md:grid-cols-[350px_1fr] gap-6">
           <Card>
             <CardContent className="pt-6">
@@ -52,6 +75,7 @@ export default function CalendarStep2() {
                 mode="single"
                 selected={date}
                 onSelect={setDate}
+<<<<<<< HEAD
                 className="rounded-md border calendar-fix"
                 components={{
                   Day: ({ date: dayDate, ...props }) => {
@@ -69,6 +93,13 @@ export default function CalendarStep2() {
             </CardContent>
           </Card>
 
+=======
+                className="rounded-md border"
+              />
+            </CardContent>
+          </Card>
+          
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
           <Card>
             <CardHeader>
               <CardTitle>

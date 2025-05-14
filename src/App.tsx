@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useState } from "react";
 import { Layout } from "./components/layout/Layout";
 import Index from "./pages/Index";
@@ -12,6 +12,7 @@ import ProjectDetailsPage from "./pages/ProjectDetailsPage";
 import Calendar from "./pages/Calendar";
 import CalendarTest from "./pages/CalendarTest";
 import CalendarSimplified from "./pages/CalendarSimplified";
+import CalendarStep3 from "./pages/CalendarStep3";
 import TasksPage from "./pages/TasksPage";
 import TasksPageDebug from "./pages/TasksPage.debug";
 import TasksPageNew from "./pages/TasksPage.new";
@@ -79,6 +80,7 @@ export default function App() {
             <Route path="/calendar" element={<Layout><Calendar /></Layout>} />
             <Route path="/calendar-test" element={<Layout><CalendarTest /></Layout>} />
             <Route path="/calendar-simple" element={<Layout><CalendarSimplified /></Layout>} />
+            <Route path="/calendar-step3" element={<Layout><CalendarStep3 /></Layout>} />
             <Route path="/files" element={<Layout><Files /></Layout>} />
             <Route path="/settings" element={<Layout><Settings /></Layout>} />
             <Route path="*" element={<NotFound />} />

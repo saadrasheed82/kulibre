@@ -53,13 +53,22 @@ import { useNavigate } from "react-router-dom";
 
 export default function ProjectsPage() {
   console.log("ProjectsPage component rendering");
+<<<<<<< HEAD
 
+=======
+  
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+<<<<<<< HEAD
   const [statusFilter, setStatusFilter] = useState<"draft" | "in_progress" | "review" | "approved" | "completed" | "archived" | "all">("all");
   const [typeFilter, setTypeFilter] = useState<"website" | "mobile_app" | "branding" | "marketing" | "design" | "development" | "other" | "all">("all");
+=======
+  const [statusFilter, setStatusFilter] = useState<"draft" | "in_progress" | "review" | "approved" | "completed" | "archived" | "">("");
+  const [typeFilter, setTypeFilter] = useState<"website" | "mobile_app" | "branding" | "marketing" | "design" | "development" | "other" | "">("");
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
   const [sortBy, setSortBy] = useState<string>("created_at:desc");
   const [editingProject, setEditingProject] = useState<any>(null);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -92,7 +101,11 @@ export default function ProjectsPage() {
 
           throw tableCheckError;
         }
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
         console.log("Projects table exists, continuing...");
 
         // Build query
@@ -108,11 +121,19 @@ export default function ProjectsPage() {
           `);
 
         // Apply filters
+<<<<<<< HEAD
         if (statusFilter && statusFilter !== "all") {
           query = query.eq('status', statusFilter as any);
         }
 
         if (typeFilter && typeFilter !== "all") {
+=======
+        if (statusFilter) {
+          query = query.eq('status', statusFilter as any);
+        }
+
+        if (typeFilter) {
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
           query = query.eq('type', typeFilter as any);
         }
 
@@ -128,7 +149,11 @@ export default function ProjectsPage() {
         }
 
         console.log("Projects fetched successfully:", data);
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
         // Process data to format team members
         return data.map((project: any) => ({
           ...project,
@@ -153,7 +178,11 @@ export default function ProjectsPage() {
           description: error instanceof Error ? error.message : "An unknown error occurred",
           variant: "destructive",
         });
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
         return [];
       }
     },
@@ -229,7 +258,11 @@ export default function ProjectsPage() {
 
   const handleDeleteProject = async () => {
     if (!projectToDelete) return;
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
     try {
       const { error } = await supabase
         .from("projects")
@@ -311,8 +344,13 @@ CREATE TABLE IF NOT EXISTS project_members (
 
   // Helper function to render a project card
   const renderProjectCard = (project: any) => (
+<<<<<<< HEAD
     <Card
       key={project.id}
+=======
+    <Card 
+      key={project.id} 
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
       className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
       onClick={() => navigate(`/project/${project.id}`)}
     >
@@ -326,7 +364,11 @@ CREATE TABLE IF NOT EXISTS project_members (
               {project.client?.name || "No client"}
             </CardDescription>
           </div>
+<<<<<<< HEAD
           <Badge
+=======
+          <Badge 
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
             className={statusColors[project.status] || "bg-gray-100"}
             onClick={(e) => e.stopPropagation()} // Prevent card click when clicking on badge
           >
@@ -338,7 +380,11 @@ CREATE TABLE IF NOT EXISTS project_members (
         <p className="text-sm text-muted-foreground line-clamp-2">
           {project.description || "No description provided"}
         </p>
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
             <span>Progress</span>
@@ -346,11 +392,19 @@ CREATE TABLE IF NOT EXISTS project_members (
           </div>
           <Progress value={calculateProgress(project)} className="h-2" />
         </div>
+<<<<<<< HEAD
 
         <div className="flex justify-center">
           <Button
             variant="outline"
             size="sm"
+=======
+        
+        <div className="flex justify-center">
+          <Button 
+            variant="outline" 
+            size="sm" 
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
             className="w-full mt-2"
             onClick={(e) => {
               e.stopPropagation();
@@ -360,7 +414,11 @@ CREATE TABLE IF NOT EXISTS project_members (
             View Details
           </Button>
         </div>
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
         <div className="flex justify-between items-center pt-2">
           <div className="flex -space-x-2">
             {project.team_members && project.team_members.slice(0, 3).map((member: any, index: number) => (
@@ -378,12 +436,21 @@ CREATE TABLE IF NOT EXISTS project_members (
               </Avatar>
             )}
           </div>
+<<<<<<< HEAD
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
+=======
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
                 className="h-8 w-8"
                 onClick={(e) => e.stopPropagation()} // Prevent card click when clicking on dropdown
               >
@@ -410,8 +477,13 @@ CREATE TABLE IF NOT EXISTS project_members (
   );
 
   const renderProjectRow = (project: any) => (
+<<<<<<< HEAD
     <TableRow
       key={project.id}
+=======
+    <TableRow 
+      key={project.id} 
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
       className="cursor-pointer hover:bg-muted/50"
       onClick={() => navigate(`/project/${project.id}`)}
     >
@@ -424,7 +496,11 @@ CREATE TABLE IF NOT EXISTS project_members (
         </div>
       </TableCell>
       <TableCell>
+<<<<<<< HEAD
         <Badge
+=======
+        <Badge 
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
           className={statusColors[project.status] || "bg-gray-100"}
           onClick={(e) => e.stopPropagation()} // Prevent row click when clicking on badge
         >
@@ -516,6 +592,7 @@ CREATE TABLE IF NOT EXISTS project_members (
           />
         </div>
         <div className="flex gap-2">
+<<<<<<< HEAD
           <Select value={statusFilter} onValueChange={(value: any) => setStatusFilter(value as "draft" | "in_progress" | "review" | "approved" | "completed" | "archived" | "all")}>
             <SelectTrigger className="w-[130px]">
               <div className="flex items-center gap-2">
@@ -525,6 +602,17 @@ CREATE TABLE IF NOT EXISTS project_members (
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
+=======
+          <Select value={statusFilter} onValueChange={(value: any) => setStatusFilter(value as "draft" | "in_progress" | "review" | "approved" | "completed" | "archived" | "")}>
+            <SelectTrigger className="w-[130px]">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4" />
+                <span>{statusFilter ? formatStatus(statusFilter) : "All Status"}</span>
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All Status</SelectItem>
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
               <SelectItem value="draft">Draft</SelectItem>
               <SelectItem value="in_progress">In Progress</SelectItem>
               <SelectItem value="review">Review</SelectItem>
@@ -534,6 +622,7 @@ CREATE TABLE IF NOT EXISTS project_members (
             </SelectContent>
           </Select>
 
+<<<<<<< HEAD
           <Select value={typeFilter} onValueChange={(value: any) => setTypeFilter(value as "website" | "mobile_app" | "branding" | "marketing" | "design" | "development" | "other" | "all")}>
             <SelectTrigger className="w-[130px]">
               <div className="flex items-center gap-2">
@@ -543,6 +632,17 @@ CREATE TABLE IF NOT EXISTS project_members (
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Types</SelectItem>
+=======
+          <Select value={typeFilter} onValueChange={(value: any) => setTypeFilter(value as "website" | "mobile_app" | "branding" | "marketing" | "design" | "development" | "other" | "")}>
+            <SelectTrigger className="w-[130px]">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4" />
+                <span>{typeFilter ? formatStatus(typeFilter) : "All Types"}</span>
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All Types</SelectItem>
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
               <SelectItem value="website">Website</SelectItem>
               <SelectItem value="mobile_app">Mobile App</SelectItem>
               <SelectItem value="branding">Branding</SelectItem>
@@ -679,11 +779,19 @@ CREATE TABLE IF NOT EXISTS project_members (
       ) : (
         <Card className="p-6 text-center">
           <p className="text-muted-foreground mb-4">
+<<<<<<< HEAD
             {searchQuery || (statusFilter && statusFilter !== "all") || (typeFilter && typeFilter !== "all")
               ? "No projects match your filters. Try adjusting your search criteria."
               : "No projects found. Create your first project to get started."}
           </p>
           <NewProjectModal
+=======
+            {searchQuery || statusFilter || typeFilter
+              ? "No projects match your filters. Try adjusting your search criteria."
+              : "No projects found. Create your first project to get started."}
+          </p>
+          <NewProjectModal 
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
             trigger={<Button>Create New Project</Button>}
             onProjectCreated={refetch}
           />
@@ -778,8 +886,13 @@ CREATE TABLE IF NOT EXISTS project_members (
               </div>
             </div>
             <DialogFooter>
+<<<<<<< HEAD
               <Button
                 variant="destructive"
+=======
+              <Button 
+                variant="destructive" 
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
                 onClick={() => {
                   setProjectToDelete(editingProject.id);
                   setIsDeleteDialogOpen(true);

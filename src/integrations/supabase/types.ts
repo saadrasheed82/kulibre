@@ -34,9 +34,15 @@ export type Database = {
         Relationships: []
       }
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 
 >>>>>>> 4bdaba1 (4/28/25 3)
+=======
+
+=======
+>>>>>>> 59dda502a55cba9caec515ad5ad1f4a051cc986a
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
       files: {
         Row: {
           content_type: string | null
@@ -150,6 +156,49 @@ export type Database = {
         Relationships: []
       }
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+      team_invitations: {
+        Row: {
+          id: string
+          email: string
+          role: string
+          user_id: string
+          created_at: string | null
+          expires_at: string | null
+          accepted_at: string | null
+        }
+        Insert: {
+          id?: string
+          email: string
+          role: string
+          user_id: string
+          created_at?: string | null
+          expires_at?: string | null
+          accepted_at?: string | null
+        }
+        Update: {
+          id?: string
+          email?: string
+          role?: string
+          user_id?: string
+          created_at?: string | null
+          expires_at?: string | null
+          accepted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_invitations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+
+=======
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
       project_members: {
         Row: {
           assigned_at: string | null
@@ -253,6 +302,7 @@ export type Database = {
         }
         Relationships: []
       }
+<<<<<<< HEAD
 =======
       team_invitations: {
         Row: {
@@ -294,6 +344,9 @@ export type Database = {
       }
 
 >>>>>>> 4bdaba1 (4/28/25 3)
+=======
+>>>>>>> 59dda502a55cba9caec515ad5ad1f4a051cc986a
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
       subscriptions: {
         Row: {
           created_at: string

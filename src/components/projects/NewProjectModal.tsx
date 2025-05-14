@@ -22,7 +22,10 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+<<<<<<< HEAD
 import type { Database } from "@/integrations/supabase/types";
+=======
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
 
 interface NewProjectModalProps {
   trigger?: React.ReactNode;
@@ -46,6 +49,7 @@ export function NewProjectModal({ trigger, onProjectCreated }: NewProjectModalPr
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
+<<<<<<< HEAD
 
   const handleSelectChange = (name: string, value: any) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -143,11 +147,112 @@ export function NewProjectModal({ trigger, onProjectCreated }: NewProjectModalPr
         description: error.message,
         variant: "destructive",
       });
+=======
+
+  const handleSelectChange = (name: string, value: any) => {
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.name.trim()) {
+      toast({
+        title: "Error",
+        description: "Project name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        throw new Error("You must be logged in to create a project");
+      }
+
+      console.log("Creating new project with data:", {
+        name: formData.name,
+        description: formData.description,
+        type: formData.type,
+        status: formData.status,
+        start_date: formData.start_date || null,
+        due_date: formData.due_date || null,
+        created_by: user.id
+      });
+
+      // Insert project
+      const { data, error } = await supabase
+        .from("projects")
+        .insert([{
+          name: formData.name,
+          description: formData.description,
+          type: formData.type,
+          status: formData.status,
+          start_date: formData.start_date || null,
+          due_date: formData.due_date || null,
+          created_by: user.id,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }])
+        .select();
+
+      if (error) throw error;
+
+      // Add current user as project member
+      if (data && data[0]) {
+        const { error: memberError } = await supabase
+          .from("project_members")
+          .insert({
+            project_id: data[0].id,
+            user_id: user.id,
+            role: "owner",
+            assigned_at: new Date().toISOString(),
+          });
+
+        if (memberError) {
+          console.error("Error adding user as project member:", memberError);
+        }
+      }
+      toast({
+        title: "Project created",
+        description: "Your new project has been created successfully.",
+      });
+
+      // Reset form and close modal
+      setFormData({
+        name: "",
+        description: "",
+        type: "website",
+        status: "draft",
+        start_date: "",
+        due_date: "",
+      });
+      setOpen(false);
+
+      // Call callback if provided
+      if (onProjectCreated) {
+        onProjectCreated();
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error creating project",
+        description: error.message,
+        variant: "destructive",
+      });
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
     } finally {
       setIsSubmitting(false);
     }
   };
+<<<<<<< HEAD
 
+=======
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>

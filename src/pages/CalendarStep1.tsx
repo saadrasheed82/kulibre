@@ -5,17 +5,28 @@ import { Button } from "@/components/ui/button";
 
 export default function CalendarStep1() {
   console.log("CalendarStep1 component rendering...");
+<<<<<<< HEAD
 
   try {
     const [date, setDate] = useState<Date | undefined>(new Date());
 
+=======
+  
+  try {
+    const [date, setDate] = useState<Date | undefined>(new Date());
+    
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
     return (
       <div className="space-y-8">
         <div>
           <h1 className="text-3xl font-bold">Calendar</h1>
           <p className="text-muted-foreground mt-1">View and manage your schedule</p>
         </div>
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
         <div className="grid grid-cols-1 md:grid-cols-[350px_1fr] gap-6">
           <Card>
             <CardContent className="pt-6">
@@ -23,6 +34,7 @@ export default function CalendarStep1() {
                 mode="single"
                 selected={date}
                 onSelect={setDate}
+<<<<<<< HEAD
                 className="rounded-md border calendar-fix"
                 components={{
                   Day: ({ date: dayDate, ...props }) => {
@@ -40,6 +52,13 @@ export default function CalendarStep1() {
             </CardContent>
           </Card>
 
+=======
+                className="rounded-md border"
+              />
+            </CardContent>
+          </Card>
+          
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
           <Card>
             <CardHeader>
               <CardTitle>

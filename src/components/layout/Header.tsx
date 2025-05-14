@@ -1,7 +1,13 @@
 
+<<<<<<< HEAD
 import { Bell, Search, Settings, LogOut, User } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
+=======
+import { Bell, Search } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {

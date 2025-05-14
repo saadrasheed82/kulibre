@@ -1,9 +1,17 @@
+<<<<<<< HEAD
 import { useState, useRef, useEffect } from "react";
+=======
+import { useState } from "react";
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+<<<<<<< HEAD
 import { format, parseISO, isValid, addDays } from "date-fns";
+=======
+import { format, parseISO, isValid } from "date-fns";
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
 import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Button } from "@/components/ui/button";
@@ -12,6 +20,7 @@ import { EventDetailsModal } from "@/components/EventDetailsModal";
 import { CalendarFilters } from "@/components/CalendarFilters";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+<<<<<<< HEAD
 import { CheckSquare } from "lucide-react";
 import {
   AlertDialog,
@@ -29,6 +38,13 @@ export default function CalendarPage() {
 
   // Add state for component error handling
   const [componentError, setComponentError] = useState<Error | null>(null);
+=======
+
+export default function CalendarPage() {
+  console.log("Calendar component rendering...");
+  // Add error boundary
+  try {
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
   const [date, setDate] = useState<Date | undefined>(new Date());
   const eventsRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState("month");
@@ -37,6 +53,7 @@ export default function CalendarPage() {
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [isEditingEvent, setIsEditingEvent] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+<<<<<<< HEAD
   const [draggedEvent, setDraggedEvent] = useState<any>(null);
   const [draggedOverDate, setDraggedOverDate] = useState<Date | null>(null);
   const [rescheduleDialogOpen, setRescheduleDialogOpen] = useState(false);
@@ -58,6 +75,10 @@ export default function CalendarPage() {
       window.removeEventListener('error', handleError);
     };
   }, []);
+=======
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
 
   interface CalendarFiltersType {
     teamMember?: string;
@@ -105,6 +126,7 @@ export default function CalendarPage() {
         // First, check if the calendar_events table exists
         let hasCalendarEventsTable = true;
         try {
+<<<<<<< HEAD
           // Use a more reliable method to check if the table exists
           const { data: tableExists, error: tableCheckError } = await supabase
             .from('calendar_events')
@@ -113,6 +135,14 @@ export default function CalendarPage() {
             .throwOnError();
 
           // If there's an error, the table might not exist
+=======
+          const { error: tableCheckError } = await supabase
+            .from('calendar_events')
+            .select('id')
+            .limit(1);
+
+          // If the table doesn't exist, fall back to tasks
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
           if (tableCheckError) {
             console.log("Calendar events table check error:", tableCheckError);
             if (tableCheckError.message.includes("relation") && tableCheckError.message.includes("does not exist")) {
@@ -143,6 +173,7 @@ export default function CalendarPage() {
             }
 
             const tasksResponse = await tasksQuery;
+<<<<<<< HEAD
 
             if (tasksResponse.error) {
               console.error("Error fetching tasks:", tasksResponse.error);
@@ -150,6 +181,15 @@ export default function CalendarPage() {
               const emptyResult: CalendarEvents = {
                 events: [],
                 tasks: []
+=======
+            
+            if (tasksResponse.error) {
+              console.error("Error fetching tasks:", tasksResponse.error);
+              // Return empty data if there's an error
+              const emptyResult: CalendarEvents = { 
+                events: [], 
+                tasks: [] 
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
               };
               return emptyResult;
             }
@@ -163,9 +203,15 @@ export default function CalendarPage() {
           } catch (error) {
             console.error("Exception in tasks query:", error);
             // Return empty data if there's an exception
+<<<<<<< HEAD
             const emptyResult: CalendarEvents = {
               events: [],
               tasks: []
+=======
+            const emptyResult: CalendarEvents = { 
+              events: [], 
+              tasks: [] 
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
             };
             return emptyResult;
           }
@@ -175,7 +221,10 @@ export default function CalendarPage() {
         let eventsResponse = { data: null, error: null };
         try {
           console.log("Querying calendar events table");
+<<<<<<< HEAD
           // First, try to get the events without the creator join
+=======
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
           let eventsQuery = supabase
             .from('calendar_events')
             .select(`
@@ -185,15 +234,24 @@ export default function CalendarPage() {
 
           // Apply search query filter
           if (searchQuery) {
+<<<<<<< HEAD
             eventsQuery = eventsQuery.or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
           }
 
           // Apply event type filter
           if (filters.eventType && filters.eventType !== 'all') {
+=======
+            eventsQuery = eventsQuery.ilike('title', `%${searchQuery}%`);
+          }
+
+          // Apply event type filter
+          if (filters.eventType) {
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
             eventsQuery = eventsQuery.eq('event_type', filters.eventType);
           }
 
           // Apply team member filter
+<<<<<<< HEAD
           if (filters.teamMember && filters.teamMember !== 'all') {
             try {
               // Get the current user to check if they're filtering for their own events
@@ -236,6 +294,26 @@ export default function CalendarPage() {
                   // If no events found for this team member, return empty array
                   eventsQuery = eventsQuery.eq('id', '00000000-0000-0000-0000-000000000000');
                 }
+=======
+          if (filters.teamMember) {
+            try {
+              // We need to handle this differently since we can't use the in() with a subquery
+              // First get the event IDs for this team member
+              const { data: attendeeData, error: attendeeError } = await supabase
+                .from('event_attendees')
+                .select('event_id')
+                .eq('user_id', filters.teamMember);
+              
+              if (attendeeError) {
+                console.error("Error fetching attendee data:", attendeeError);
+                // Continue with no filter rather than failing completely
+              } else if (attendeeData && attendeeData.length > 0) {
+                const eventIds = attendeeData.map(item => item.event_id);
+                eventsQuery = eventsQuery.in('id', eventIds);
+              } else {
+                // If no events found for this team member, return empty array
+                eventsQuery = eventsQuery.eq('id', '00000000-0000-0000-0000-000000000000'); // This will return no results
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
               }
             } catch (error) {
               console.error("Exception in attendee query:", error);
@@ -250,6 +328,7 @@ export default function CalendarPage() {
             console.error("Error in events query:", eventsResponse.error);
             throw eventsResponse.error;
           }
+<<<<<<< HEAD
 
           console.log("Events fetched successfully:", eventsResponse.data?.length || 0);
 
@@ -291,6 +370,16 @@ export default function CalendarPage() {
           const emptyResult: CalendarEvents = {
             events: [],
             tasks: []
+=======
+          
+          console.log("Events fetched successfully:", eventsResponse.data?.length || 0);
+        } catch (error) {
+          console.error("Exception in calendar events query:", error);
+          // Return empty data if there's an exception
+          const emptyResult: CalendarEvents = { 
+            events: [], 
+            tasks: [] 
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
           };
           return emptyResult;
         }
@@ -303,6 +392,7 @@ export default function CalendarPage() {
             eventsWithAttendees = [];
           } else {
             console.log("Processing events to add attendees");
+<<<<<<< HEAD
 
             // Get all event IDs to fetch attendees in a single query
             const eventIds = eventsResponse.data.map(event => event.id);
@@ -386,6 +476,48 @@ export default function CalendarPage() {
                 attendees: attendeesByEvent[event.id] || []
               };
             });
+=======
+            eventsWithAttendees = await Promise.all(
+              (eventsResponse.data || []).map(async (event) => {
+                try {
+                  // Fetch attendees for this event
+                  const { data: attendees, error: attendeesError } = await supabase
+                    .from('event_attendees')
+                    .select(`
+                      user_id, 
+                      role, 
+                      response,
+                      profile:profiles!event_attendees_user_id_fkey (full_name)
+                    `)
+                    .eq('event_id', event.id);
+                  
+                  if (attendeesError) {
+                    console.error(`Error fetching attendees for event ${event.id}:`, attendeesError);
+                  }
+                  
+                  // Ensure event_type is one of the allowed values
+                  const validEventType = (type: string): "task" | "meeting" | "milestone" | "reminder" => {
+                    return ["task", "meeting", "milestone", "reminder"].includes(type) 
+                      ? (type as "task" | "meeting" | "milestone" | "reminder") 
+                      : "task"; // Default to task if invalid
+                  };
+                    
+                  return {
+                    ...event,
+                    event_type: validEventType(event.event_type),
+                    attendees: attendees || []
+                  };
+                } catch (error) {
+                  console.error(`Error fetching attendees for event ${event.id}:`, error);
+                  return {
+                    ...event,
+                    event_type: "task" as const, // Ensure valid type even in error case
+                    attendees: []
+                  };
+                }
+              })
+            );
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
           }
         } catch (error) {
           console.error("Exception processing events with attendees:", error);
@@ -396,6 +528,7 @@ export default function CalendarPage() {
         let tasksData = [];
         try {
           console.log("Fetching tasks for calendar");
+<<<<<<< HEAD
           // Check the tasks table structure first
           try {
             // First, get a simpler query to work
@@ -502,6 +635,28 @@ export default function CalendarPage() {
           }
           } catch (innerError) {
             console.error("Inner exception in tasks query:", innerError);
+=======
+          let tasksQuery = supabase
+            .from('tasks')
+            .select('id, title, due_date, priority, description, project_id, assigned_to')
+            .not('due_date', 'is', null);
+
+          if (searchQuery) {
+            tasksQuery = tasksQuery.ilike('title', `%${searchQuery}%`);
+          }
+
+          if (filters.teamMember) {
+            tasksQuery = tasksQuery.eq('assigned_to', filters.teamMember);
+          }
+
+          const tasksResponse = await tasksQuery;
+
+          if (tasksResponse.error) {
+            console.error("Error fetching tasks:", tasksResponse.error);
+          } else {
+            console.log("Tasks fetched successfully:", tasksResponse.data?.length || 0);
+            tasksData = tasksResponse.data || [];
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
           }
         } catch (error) {
           console.error("Exception fetching tasks:", error);
@@ -511,7 +666,11 @@ export default function CalendarPage() {
           events: eventsWithAttendees.length,
           tasks: tasksData.length
         });
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
         const result: CalendarEvents = {
           events: eventsWithAttendees,
           tasks: tasksData
@@ -528,11 +687,19 @@ export default function CalendarPage() {
             variant: "destructive",
           });
         }
+<<<<<<< HEAD
 
         // Ensure we return the correct type
         const emptyResult: CalendarEvents = {
           events: [],
           tasks: []
+=======
+        
+        // Ensure we return the correct type
+        const emptyResult: CalendarEvents = { 
+          events: [], 
+          tasks: [] 
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
         };
         return emptyResult;
       }
@@ -540,6 +707,7 @@ export default function CalendarPage() {
   });
 
   // Function to format date for comparison
+<<<<<<< HEAD
   const formatDateForComparison = (dateString: string | Date | undefined) => {
     try {
       if (!dateString) return null;
@@ -561,13 +729,32 @@ export default function CalendarPage() {
   // Filter events based on the selected date
   console.log("Events data:", events);
 
+=======
+  const formatDateForComparison = (dateString: string | Date) => {
+    try {
+      const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
+      return isValid(date) ? format(date, 'yyyy-MM-dd') : null;
+    } catch (error) {
+      console.error("Invalid date:", dateString);
+      return null;
+    }
+  };
+
+  // Filter events based on the selected date
+  console.log("Events data:", events);
+  
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
   const selectedDateEvents = (() => {
     try {
       if (!events || !events.events) {
         console.log("No events data available");
         return [];
       }
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
       console.log("Filtering events for date:", date);
       return events.events.filter(event => {
         try {
@@ -575,7 +762,11 @@ export default function CalendarPage() {
             console.log("Invalid event data:", event);
             return false;
           }
+<<<<<<< HEAD
 
+=======
+          
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
           const eventDate = formatDateForComparison(event.start_date);
           const selectedDate = formatDateForComparison(date || new Date());
           console.log(`Event ${event.id}: ${eventDate} vs ${selectedDate}`);
@@ -598,7 +789,11 @@ export default function CalendarPage() {
         console.log("No tasks data available");
         return [];
       }
+<<<<<<< HEAD
 
+=======
+      
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
       console.log("Filtering tasks for date:", date);
       return events.tasks.filter(task => {
         try {
@@ -606,7 +801,11 @@ export default function CalendarPage() {
             console.log("Invalid task data:", task);
             return false;
           }
+<<<<<<< HEAD
 
+=======
+          
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
           const taskDate = formatDateForComparison(task.due_date);
           const selectedDate = formatDateForComparison(date || new Date());
           console.log(`Task ${task.id}: ${taskDate} vs ${selectedDate}`);
@@ -643,6 +842,7 @@ export default function CalendarPage() {
     return colors[priority] || "bg-gray-100 text-gray-800";
   };
 
+<<<<<<< HEAD
   // State for loading events when date changes
   const [isLoadingEvents, setIsLoadingEvents] = useState(false);
 
@@ -669,6 +869,8 @@ export default function CalendarPage() {
     handleDateSelect(new Date());
   };
 
+=======
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
   // Function to handle event creation
   const handleEventCreated = () => {
     queryClient.invalidateQueries({ queryKey: ['calendar-events'] });
@@ -683,6 +885,7 @@ export default function CalendarPage() {
   const handleEventUpdated = () => {
     queryClient.invalidateQueries({ queryKey: ['calendar-events'] });
     setEventDetailsModalOpen(false);
+<<<<<<< HEAD
 
     // When the user clicks Edit in the EventDetailsModal, open the NewEventModal with the selected event data
     if (selectedEvent) {
@@ -706,11 +909,14 @@ export default function CalendarPage() {
     // Refresh the calendar data
     queryClient.invalidateQueries({ queryKey: ['calendar-events'] });
 
+=======
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
     toast({
       title: "Event Updated",
       description: "Your event has been successfully updated.",
     });
   };
+<<<<<<< HEAD
 
   // Drag and drop handlers
   const handleDragStart = (event: any) => {
@@ -817,6 +1023,8 @@ export default function CalendarPage() {
       </div>
     );
   }
+=======
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
 
   return (
       <div className="space-y-8">
@@ -826,6 +1034,7 @@ export default function CalendarPage() {
         </div>
 
         <div className="flex flex-col sm:flex-row justify-between gap-4">
+<<<<<<< HEAD
           <div className="flex flex-wrap gap-2 items-center">
             <ToggleGroup
               type="single"
@@ -854,6 +1063,25 @@ export default function CalendarPage() {
             </Button>
           </div>
 
+=======
+          <ToggleGroup
+            type="single"
+            defaultValue="month"
+            className="mb-4"
+            onValueChange={setView}
+          >
+            <ToggleGroupItem value="month" aria-label="Month">
+              Month
+            </ToggleGroupItem>
+            <ToggleGroupItem value="week" aria-label="Week">
+              Week
+            </ToggleGroupItem>
+            <ToggleGroupItem value="day" aria-label="Day">
+              Day
+            </ToggleGroupItem>
+          </ToggleGroup>
+
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
           <Button onClick={() => setNewEventModalOpen(true)}>Add New Event</Button>
         </div>
 
@@ -1021,14 +1249,21 @@ export default function CalendarPage() {
                 <div className="text-center py-8">
                   <p className="text-red-500 mb-2">Error loading calendar data</p>
                   <p className="text-muted-foreground">There was a problem loading your calendar. Please try again later.</p>
+<<<<<<< HEAD
                   <Button
                     onClick={() => window.location.reload()}
                     variant="outline"
+=======
+                  <Button 
+                    onClick={() => window.location.reload()} 
+                    variant="outline" 
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
                     className="mt-4"
                   >
                     Refresh Page
                   </Button>
                 </div>
+<<<<<<< HEAD
               ) : isLoadingEvents ? (
                 <div className="flex justify-center items-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -1050,10 +1285,23 @@ export default function CalendarPage() {
                           <div
                             key={event.id}
                             className="flex items-center justify-between p-3 bg-muted rounded-lg hover:cursor-pointer hover:bg-muted/80 transition-colors hover:shadow-md border-l-4 border-primary"
+=======
+              ) : (
+                <>
+                  {selectedDateEvents.length > 0 && (
+                    <div>
+                      <h3 className="font-medium mb-3">Events</h3>
+                      <div className="space-y-2">
+                        {selectedDateEvents.map(event => (
+                          <div
+                            key={event.id}
+                            className="flex items-center justify-between p-3 bg-muted rounded-lg hover:cursor-pointer hover:bg-muted/80 transition-colors"
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
                             onClick={() => {
                               setSelectedEvent(event);
                               setEventDetailsModalOpen(true);
                             }}
+<<<<<<< HEAD
                             draggable
                             onDragStart={(e) => {
                               e.dataTransfer.setData('text/plain', event.id);
@@ -1070,6 +1318,12 @@ export default function CalendarPage() {
                                 </div>
                               </div>
                               <div className="flex flex-wrap gap-2 mt-1">
+=======
+                          >
+                            <div>
+                              <p className="font-medium">{event.title}</p>
+                              <div className="flex gap-2 mt-1">
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
                                 <Badge className={getEventTypeColor(event.event_type)}>
                                   {event.event_type.charAt(0).toUpperCase() + event.event_type.slice(1)}
                                 </Badge>
@@ -1085,6 +1339,14 @@ export default function CalendarPage() {
                                 </p>
                               )}
                             </div>
+<<<<<<< HEAD
+=======
+                            <div className="text-sm text-muted-foreground">
+                              {event.all_day ? 'All day' : (
+                                event.start_date && format(new Date(event.start_date), 'h:mm a')
+                              )}
+                            </div>
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
                           </div>
                         ))}
                       </div>
@@ -1092,6 +1354,7 @@ export default function CalendarPage() {
                   )}
 
                   {selectedDateTasks.length > 0 && (
+<<<<<<< HEAD
                     <div className="animate-fadeIn">
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="font-medium flex items-center">
@@ -1107,10 +1370,20 @@ export default function CalendarPage() {
                           <div
                             key={task.id}
                             className="flex items-center justify-between p-3 bg-muted rounded-lg hover:cursor-pointer hover:bg-muted/80 transition-colors hover:shadow-md border-l-4 border-blue-400"
+=======
+                    <div>
+                      <h3 className="font-medium mb-3">Tasks Due</h3>
+                      <div className="space-y-2">
+                        {selectedDateTasks.map(task => (
+                          <div
+                            key={task.id}
+                            className="flex items-center justify-between p-3 bg-muted rounded-lg hover:cursor-pointer hover:bg-muted/80 transition-colors"
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
                             onClick={() => {
                               setSelectedEvent({
                                 ...task,
                                 event_type: 'task',
+<<<<<<< HEAD
                                 start_date: task.due_date,
                                 all_day: true
                               });
@@ -1137,11 +1410,24 @@ export default function CalendarPage() {
                                   {task.priority} priority
                                 </Badge>
                               </div>
+=======
+                                start_date: task.due_date
+                              });
+                              setEventDetailsModalOpen(true);
+                            }}
+                          >
+                            <div>
+                              <p className="font-medium">{task.title}</p>
+                              <Badge className={`${getTaskPriorityColor(task.priority)} mt-1`} variant="outline">
+                                {task.priority} priority
+                              </Badge>
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
                               {task.description && (
                                 <p className="text-sm text-muted-foreground mt-1 line-clamp-1">
                                   {task.description}
                                 </p>
                               )}
+<<<<<<< HEAD
                               {task.project && (
                                 <div className="mt-1">
                                   <Badge variant="outline" className="text-xs">
@@ -1149,6 +1435,8 @@ export default function CalendarPage() {
                                   </Badge>
                                 </div>
                               )}
+=======
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
                             </div>
                           </div>
                         ))}
@@ -1157,6 +1445,7 @@ export default function CalendarPage() {
                   )}
 
                   {selectedDateEvents.length === 0 && selectedDateTasks.length === 0 && (
+<<<<<<< HEAD
                     <div className="text-muted-foreground text-center py-8 animate-fadeIn">
                       <div className="bg-muted p-6 rounded-lg border border-dashed border-muted-foreground/50">
                         <p className="font-medium">No events scheduled for {date ? format(date, 'MMMM d, yyyy') : 'today'}</p>
@@ -1181,6 +1470,11 @@ export default function CalendarPage() {
                         </div>
                       </div>
                     </div>
+=======
+                    <p className="text-muted-foreground text-center py-8">
+                      No events scheduled for this day
+                    </p>
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
                   )}
                 </>
               )}
@@ -1192,9 +1486,12 @@ export default function CalendarPage() {
           open={newEventModalOpen}
           onOpenChange={setNewEventModalOpen}
           onEventCreated={handleEventCreated}
+<<<<<<< HEAD
           onEventUpdated={handleEventEditCompleted}
           event={selectedEvent}
           isEditing={isEditingEvent}
+=======
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
         />
         <EventDetailsModal
           open={eventDetailsModalOpen}
@@ -1225,4 +1522,24 @@ export default function CalendarPage() {
         </AlertDialog>
       </div>
   );
+  } catch (error) {
+    console.error("Calendar component error:", error);
+    return (
+      <div className="p-8">
+        <h1 className="text-3xl font-bold mb-4">Calendar Error</h1>
+        <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-4">
+          <p className="text-red-600">There was an error loading the calendar component.</p>
+          <p className="text-sm text-red-500 mt-2">
+            Error details: {error instanceof Error ? error.message : String(error)}
+          </p>
+        </div>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+        >
+          Reload Page
+        </button>
+      </div>
+    );
+  }
 }

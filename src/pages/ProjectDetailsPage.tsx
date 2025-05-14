@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+<<<<<<< HEAD
 import {
   ArrowLeft,
   Calendar,
@@ -8,6 +9,15 @@ import {
   DollarSign,
   Edit,
   MoreHorizontal,
+=======
+import { 
+  ArrowLeft, 
+  Calendar, 
+  Clock, 
+  DollarSign, 
+  Edit, 
+  MoreHorizontal, 
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
   Users,
   Plus,
   CheckCircle2,
@@ -64,7 +74,11 @@ export default function ProjectDetailsPage() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [databaseError, setDatabaseError] = useState(false);
+<<<<<<< HEAD
 
+=======
+  
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
   // Define a type for the project object to handle optional properties
   type ProjectType = {
     id: string;
@@ -129,10 +143,17 @@ export default function ProjectDetailsPage() {
           .select('id, name, description, type, status')
           .eq('id', id)
           .single();
+<<<<<<< HEAD
 
         if (basicProjectError) {
           console.error("Error fetching basic project data:", basicProjectError);
 
+=======
+          
+        if (basicProjectError) {
+          console.error("Error fetching basic project data:", basicProjectError);
+          
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
           if (basicProjectError.code === 'PGRST116') {
             console.log("Project not found");
             toast({
@@ -143,12 +164,21 @@ export default function ProjectDetailsPage() {
             navigate('/projects', { replace: true });
             return null;
           }
+<<<<<<< HEAD
 
           throw basicProjectError;
         }
 
         console.log("Basic project data fetched successfully:", basicProject);
 
+=======
+          
+          throw basicProjectError;
+        }
+        
+        console.log("Basic project data fetched successfully:", basicProject);
+        
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
         // Now fetch full project details
         console.log("Fetching complete project details...");
         const { data: projectData, error: projectError } = await supabase
@@ -433,7 +463,11 @@ CREATE TABLE IF NOT EXISTS public.project_members (
               </code>
             </pre>
             <p className="text-sm text-amber-600 mt-4">
+<<<<<<< HEAD
               <strong>Important:</strong> Make sure your database schema matches the application code.
+=======
+              <strong>Important:</strong> Make sure your database schema matches the application code. 
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
               The application expects <code>type</code> and <code>status</code> to be TEXT fields, not ENUMs.
             </p>
             <p className="text-sm mt-2">
@@ -697,7 +731,11 @@ CREATE TABLE IF NOT EXISTS public.project_members (
               )}
             </CardContent>
           </Card>
+<<<<<<< HEAD
 
+=======
+          
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
           <Card>
             <CardHeader>
               <CardTitle>Project Details</CardTitle>
@@ -766,11 +804,19 @@ CREATE TABLE IF NOT EXISTS public.project_members (
             </CardContent>
           </Card>
         </TabsContent>
+<<<<<<< HEAD
 
         <TabsContent value="tasks" className="space-y-4">
           <ProjectTasksTab projectId={id} />
         </TabsContent>
 
+=======
+        
+        <TabsContent value="tasks" className="space-y-4">
+          <ProjectTasksTab projectId={id} />
+        </TabsContent>
+        
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
         <TabsContent value="files" className="space-y-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
@@ -784,7 +830,11 @@ CREATE TABLE IF NOT EXISTS public.project_members (
             </CardContent>
           </Card>
         </TabsContent>
+<<<<<<< HEAD
 
+=======
+        
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
         <TabsContent value="team" className="space-y-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
@@ -868,7 +918,11 @@ function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
     description: "",
     status: "todo",
     priority: "medium",
+<<<<<<< HEAD
     assigned_to: "unassigned",
+=======
+    assigned_to: "",
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
     due_date: null as Date | null
   });
 
@@ -926,7 +980,11 @@ function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
           project_id: projectId,
           status: task.status,
           priority: task.priority,
+<<<<<<< HEAD
           assigned_to: task.assigned_to === "unassigned" ? null : task.assigned_to,
+=======
+          assigned_to: task.assigned_to || null,
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
           due_date: task.due_date ? format(task.due_date, 'yyyy-MM-dd') : null
         }])
         .select();
@@ -962,7 +1020,11 @@ function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
           description: task.description,
           status: task.status,
           priority: task.priority,
+<<<<<<< HEAD
           assigned_to: task.assigned_to === "unassigned" ? null : task.assigned_to,
+=======
+          assigned_to: task.assigned_to || null,
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
           due_date: task.due_date,
           completed_at: task.status === 'completed' ? new Date().toISOString() : null
         })
@@ -1048,7 +1110,11 @@ function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
       description: "",
       status: "todo",
       priority: "medium",
+<<<<<<< HEAD
       assigned_to: "unassigned",
+=======
+      assigned_to: "",
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
       due_date: null
     });
   };
@@ -1188,7 +1254,11 @@ function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
                   <SelectValue placeholder="Select assignee" />
                 </SelectTrigger>
                 <SelectContent>
+<<<<<<< HEAD
                   <SelectItem value="unassigned">Unassigned</SelectItem>
+=======
+                  <SelectItem value="">Unassigned</SelectItem>
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
                   {users?.map((user: any) => (
                     <SelectItem key={user.id} value={user.id}>
                       {user.full_name}
@@ -1249,6 +1319,7 @@ function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
                     selected={newTask.due_date}
                     onSelect={(date) => setNewTask({ ...newTask, due_date: date })}
                     initialFocus
+<<<<<<< HEAD
                     className="calendar-fix"
                     components={{
                       Day: ({ date: dayDate, ...props }) => {
@@ -1262,6 +1333,8 @@ function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
                         );
                       }
                     }}
+=======
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
                   />
                 </PopoverContent>
               </Popover>
@@ -1271,7 +1344,11 @@ function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
             <DialogClose asChild>
               <Button variant="outline">Cancel</Button>
             </DialogClose>
+<<<<<<< HEAD
             <Button
+=======
+            <Button 
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
               onClick={() => addTaskMutation.mutate(newTask)}
               disabled={!newTask.title.trim() || addTaskMutation.isPending}
             >
@@ -1309,14 +1386,23 @@ function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
               <div className="space-y-2">
                 <Label htmlFor="edit-assignee">Assignee</Label>
                 <Select
+<<<<<<< HEAD
                   value={currentTask.assigned_to || "unassigned"}
                   onValueChange={(value) => setCurrentTask({ ...currentTask, assigned_to: value })}
+=======
+                  value={currentTask.assigned_to || ""}
+                  onValueChange={(value) => setCurrentTask({ ...currentTask, assigned_to: value || null })}
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
                 >
                   <SelectTrigger id="edit-assignee">
                     <SelectValue placeholder="Select assignee" />
                   </SelectTrigger>
                   <SelectContent>
+<<<<<<< HEAD
                     <SelectItem value="unassigned">Unassigned</SelectItem>
+=======
+                    <SelectItem value="">Unassigned</SelectItem>
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
                     {users?.map((user: any) => (
                       <SelectItem key={user.id} value={user.id}>
                         {user.full_name}
@@ -1375,6 +1461,7 @@ function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
                     <CalendarComponent
                       mode="single"
                       selected={currentTask.due_date ? parseISO(currentTask.due_date) : undefined}
+<<<<<<< HEAD
                       onSelect={(date) => setCurrentTask({
                         ...currentTask,
                         due_date: date ? format(date, 'yyyy-MM-dd') : null
@@ -1393,14 +1480,26 @@ function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
                           );
                         }
                       }}
+=======
+                      onSelect={(date) => setCurrentTask({ 
+                        ...currentTask, 
+                        due_date: date ? format(date, 'yyyy-MM-dd') : null 
+                      })}
+                      initialFocus
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
                     />
                   </PopoverContent>
                 </Popover>
               </div>
             </div>
             <DialogFooter>
+<<<<<<< HEAD
               <Button
                 variant="destructive"
+=======
+              <Button 
+                variant="destructive" 
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
                 onClick={() => {
                   deleteTaskMutation.mutate(currentTask.id);
                   setIsEditTaskOpen(false);
@@ -1412,7 +1511,11 @@ function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
               <DialogClose asChild>
                 <Button variant="outline">Cancel</Button>
               </DialogClose>
+<<<<<<< HEAD
               <Button
+=======
+              <Button 
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
                 onClick={() => updateTaskMutation.mutate(currentTask)}
                 disabled={!currentTask.title.trim() || updateTaskMutation.isPending}
               >

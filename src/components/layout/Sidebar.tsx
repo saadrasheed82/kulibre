@@ -20,10 +20,19 @@ export function Sidebar({ className }: SidebarProps) {
       <nav className="space-y-1">
         <NavItem icon={<Home className="w-5 h-5" />} href="/dashboard" label="Dashboard" />
         <NavItem icon={<FolderKanban className="w-5 h-5" />} href="/projects" label="Projects" />
+<<<<<<< HEAD
         <NavItem icon={<CheckSquare className="w-5 h-5" />} href="/tasks" label="Tasks" />
         <NavItem icon={<Users className="w-5 h-5" />} href="/team" label="Team" />
         <NavItem icon={<Calendar className="w-5 h-5" />} href="/calendar" label="Calendar" />
         <NavItem icon={<File className="w-5 h-5" />} href="/files" label="Files" />
+=======
+
+        <NavItem icon={<Calendar className="w-5 h-5" />} href="/calendar" label="Calendar" />
+        <NavItem icon={<File className="w-5 h-5" />} href="/files" label="Files" />
+        <NavItem icon={<CheckSquare className="w-5 h-5" />} href="/tasks" label="Tasks" />
+        <NavItem icon={<Users className="w-5 h-5" />} href="/team" label="Team" />
+
+>>>>>>> c443c66e1b864d29687db63a9c0dc116e92db326
         <NavItem icon={<Settings className="w-5 h-5" />} href="/settings" label="Settings" />
       </nav>
     </div>
